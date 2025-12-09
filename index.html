@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pedium - Premium Editorial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+              display: ['Playfair Display', 'serif'],
+            },
+            colors: {
+              brand: {
+                black: '#0f0f0f', 
+                dark: '#1a1a1a',
+                gray: '#757575',
+                light: '#f9f9f9',
+                border: '#e5e5e5',
+                surface: '#ffffff',
+                accent: '#0f0f0f' // Main action color is black for premium feel
+              }
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.5s ease-out',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            },
+            typography: {
+              DEFAULT: {
+                css: {
+                  maxWidth: '100%',
+                  color: '#262626',
+                  fontFamily: 'Playfair Display, serif', // Editor default to Serif for reading
+                  h1: {
+                    fontFamily: 'Playfair Display, serif',
+                    fontWeight: '700',
+                    color: '#0a0a0a',
+                  },
+                  h2: {
+                    fontFamily: 'Playfair Display, serif',
+                    fontWeight: '600',
+                    color: '#0a0a0a',
+                    marginTop: '2em',
+                  },
+                  p: {
+                    fontFamily: 'Playfair Display, serif',
+                    fontSize: '1.25rem',
+                    lineHeight: '2',
+                    color: '#333333',
+                  },
+                  blockquote: {
+                    fontStyle: 'italic',
+                    borderLeftColor: '#000',
+                    color: '#1a1a1a',
+                  }
+                },
+              },
+            },
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: #ffffff;
+        color: #0f0f0f;
+        -webkit-font-smoothing: antialiased;
+      }
+      
+      /* Refined Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d4d4d4; 
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a3a3a3; 
+      }
+
+      /* Editor JS Specifics for Premium Feel */
+      .ce-block__content { max-width: 700px; margin: 0 auto; }
+      .ce-toolbar__content { max-width: 700px; margin: 0 auto; }
+      
+      .ce-header {
+        font-family: 'Playfair Display', serif;
+      }
+      
+      .ce-paragraph {
+        font-family: 'Playfair Display', serif; /* Editorial feel for reading */
+        font-size: 1.25rem;
+        line-height: 1.8;
+      }
+
+      /* Clean inputs */
+      input:focus, textarea:focus {
+        outline: none;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.21.0?external=react,react-dom",
+    "appwrite": "https://esm.sh/appwrite@16.0.2",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.294.0?external=react",
+    "date-fns": "https://esm.sh/date-fns@3.0.0",
+    "@editorjs/editorjs": "https://esm.sh/@editorjs/editorjs@2.28.2",
+    "@editorjs/header": "https://esm.sh/@editorjs/header@2.8.1",
+    "@editorjs/list": "https://esm.sh/@editorjs/list@1.9.0",
+    "@editorjs/image": "https://esm.sh/@editorjs/image@2.9.0",
+    "@editorjs/quote": "https://esm.sh/@editorjs/quote@2.6.0",
+    "@editorjs/embed": "https://esm.sh/@editorjs/embed@2.7.0",
+    "@editorjs/delimiter": "https://esm.sh/@editorjs/delimiter@1.4.0",
+    "@editorjs/checklist": "https://esm.sh/@editorjs/checklist@1.6.0",
+    "@editorjs/marker": "https://esm.sh/@editorjs/marker@1.4.0",
+    "@editorjs/inline-code": "https://esm.sh/@editorjs/inline-code@1.5.0",
+    "@editorjs/code": "https://esm.sh/@editorjs/code@2.9.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
