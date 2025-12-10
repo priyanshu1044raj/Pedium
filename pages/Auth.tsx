@@ -50,17 +50,39 @@ const Auth: React.FC = () => {
                     followersCount: 0
                 });
 
-                // Create Welcome Notification
+                // Create Welcome Notification (App System)
                 try {
+                    // Removed 'isRead' to prevent "Unknown attribute" error
                     await databases.createDocument(DB_ID, CollectionIDs.NOTIFICATIONS, ID.unique(), {
                         userId: userId,
                         type: 'welcome',
                         message: 'Welcome to Pedium! Your account has been successfully created.',
-                        link: `/profile/${userId}`,
-                        isRead: false
+                        link: `/profile/${userId}`
                     });
                 } catch (err) {
                     console.error("Failed to create welcome notification", err);
+                }
+
+                // Send Browser System Notification
+                try {
+                    if ("Notification" in window) {
+                        if (Notification.permission === "granted") {
+                            new Notification("Welcome to Pedium!", {
+                                body: "Your account has been successfully created.",
+                                icon: "/favicon.ico"
+                            });
+                        } else if (Notification.permission !== "denied") {
+                            const permission = await Notification.requestPermission();
+                            if (permission === "granted") {
+                                new Notification("Welcome to Pedium!", {
+                                    body: "Your account has been successfully created.",
+                                    icon: "/favicon.ico"
+                                });
+                            }
+                        }
+                    }
+                } catch (notifErr) {
+                    console.error("System notification failed", notifErr);
                 }
 
                 await refreshProfile();

@@ -122,9 +122,7 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
                     userId: followingId,
                     type: 'follow',
                     message: `${followerProfile?.name || 'Someone'} started following you`,
-                    link: `/profile/${followerId}`,
-                    isRead: false,
-                    createdAt: new Date().toISOString()
+                    link: `/profile/${followerId}`
                 });
             } catch (notifError) {
                 console.error("Failed to create follow notification", notifError);

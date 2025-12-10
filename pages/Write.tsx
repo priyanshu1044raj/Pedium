@@ -264,9 +264,7 @@ const Write: React.FC = () => {
                             userId: f.follower_id,
                             type: 'new_article',
                             message: `${profile.name} published: ${title}`,
-                            link: `/article/${newArticle.$id}`,
-                            isRead: false,
-                            createdAt: new Date().toISOString()
+                            link: `/article/${newArticle.$id}`
                          })
                     ));
                 }
