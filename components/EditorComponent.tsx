@@ -13,7 +13,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({ data, onChange, holde
   const ref = useRef<EditorJS | null>(null);
 
   useEffect(() => {
-    // If there is an existing instance, destroy it first to ensure clean state (helpful when data prop changes radically)
+    // If there is an existing instance, destroy it first to ensure clean state
     if (ref.current && typeof ref.current.destroy === 'function') {
          ref.current.destroy();
          ref.current = null;
@@ -30,6 +30,9 @@ const EditorComponent: React.FC<EditorComponentProps> = ({ data, onChange, holde
       const Marker = (await import('@editorjs/marker')).default;
       const InlineCode = (await import('@editorjs/inline-code')).default;
       const CodeTool = (await import('@editorjs/code')).default;
+      const Table = (await import('@editorjs/table')).default;
+      const Warning = (await import('@editorjs/warning')).default;
+      const Raw = (await import('@editorjs/raw')).default;
 
       if(ref.current) return;
 
@@ -56,6 +59,9 @@ const EditorComponent: React.FC<EditorComponentProps> = ({ data, onChange, holde
           quote: Quote,
           delimiter: Delimiter,
           embed: Embed,
+          table: Table,
+          warning: Warning,
+          raw: Raw,
           marker: {
               class: Marker,
               shortcut: 'CMD+SHIFT+M',
