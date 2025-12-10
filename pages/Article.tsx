@@ -5,31 +5,32 @@ import { databases, DB_ID, CollectionIDs, Query, ID, getProfile } from '../lib/a
 import { Article as ArticleType, Comment, UserProfile } from '../types';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
-import { Heart, MessageSquare, Share2, Send, Loader2, Check } from 'lucide-react';
+import { Heart, MessageCircle, Share2, BookmarkPlus, PlayCircle, StopCircle, Eye } from 'lucide-react';
+import { toggleFollow, checkIsFollowing } from '../lib/appwrite';
 
 const BlockRenderer: React.FC<{ block: any }> = ({ block }) => {
     switch (block.type) {
         case 'header':
             const Tag = `h${block.data.level}` as React.ElementType;
             const sizes = {
-                1: 'text-3xl md:text-4xl',
-                2: 'text-2xl md:text-3xl',
-                3: 'text-xl md:text-2xl',
-                4: 'text-lg md:text-xl',
+                1: 'text-3xl md:text-4xl leading-[1.2] font-bold', 
+                2: 'text-2xl md:text-3xl leading-[1.3] font-bold', 
+                3: 'text-xl md:text-2xl font-bold',  
+                4: 'text-lg md:text-xl font-bold',   
             };
-            return <Tag className={`font-serif font-bold mt-12 mb-4 text-black ${(sizes as any)[block.data.level] || 'text-xl'} leading-tight`} dangerouslySetInnerHTML={{ __html: block.data.text }} />;
+            return <Tag className={`font-sans mt-12 mb-6 text-[#242424] dark:text-[#f0f0f0] tracking-tight ${sizes[block.data.level as keyof typeof sizes] || 'text-xl'}`} dangerouslySetInnerHTML={{ __html: block.data.text }} />;
         case 'paragraph':
-            return <p className="mb-6 font-serif text-[1.15rem] leading-[1.8] text-gray-800 antialiased" dangerouslySetInnerHTML={{ __html: block.data.text }} />;
+            return <p className="mb-6 font-serif text-[20px] md:text-[21px] leading-[1.8] text-[#292929] dark:text-[#d1d1d1] font-light antialiased tracking-[-0.003em]" dangerouslySetInnerHTML={{ __html: block.data.text }} />;
         case 'image':
             return (
-                <figure className="my-12">
-                    <img src={block.data.file.url} alt={block.data.caption} className="w-full rounded-sm" />
-                    {block.data.caption && <figcaption className="text-center text-sm text-gray-500 mt-4 font-sans">{block.data.caption}</figcaption>}
+                <figure className="my-12 w-full">
+                    <img src={block.data.file.url} alt={block.data.caption} className="w-full h-auto rounded-lg shadow-sm" />
+                    {block.data.caption && <figcaption className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4 font-sans">{block.data.caption}</figcaption>}
                 </figure>
             );
         case 'list':
             return (
-                <ul className={`my-8 ml-6 space-y-3 font-serif text-[1.1rem] text-gray-800 ${block.data.style === 'ordered' ? 'list-decimal' : 'list-disc'}`}>
+                <ul className={`my-8 ml-6 space-y-3 font-serif text-[20px] md:text-[21px] text-[#292929] dark:text-[#d1d1d1] leading-[1.8] ${block.data.style === 'ordered' ? 'list-decimal' : 'list-disc'}`}>
                     {block.data.items.map((item: string, i: number) => (
                         <li key={i} dangerouslySetInnerHTML={{ __html: item }} className="pl-2" />
                     ))}
@@ -37,13 +38,19 @@ const BlockRenderer: React.FC<{ block: any }> = ({ block }) => {
             );
         case 'quote':
             return (
-                <blockquote className="border-l-4 border-black pl-8 my-12 italic text-2xl font-serif text-gray-900 leading-relaxed">
+                <blockquote className="border-l-[4px] border-black dark:border-gray-500 pl-6 my-12 italic font-serif text-[24px] md:text-[26px] text-[#242424] dark:text-[#e0e0e0] leading-tight">
                     "{block.data.text}"
-                    {block.data.caption && <cite className="block text-base not-italic mt-4 text-gray-500 font-sans tracking-wide uppercase">— {block.data.caption}</cite>}
+                    {block.data.caption && <cite className="block text-base not-italic mt-4 text-gray-500 dark:text-gray-400 font-sans">— {block.data.caption}</cite>}
                 </blockquote>
             );
         case 'delimiter':
-            return <div className="flex justify-center text-3xl my-16 tracking-widest text-gray-300">...</div>;
+            return <div className="flex justify-center text-3xl my-16 tracking-[0.5em] text-gray-300 dark:text-gray-600">...</div>;
+        case 'code':
+             return (
+                 <pre className="bg-[#f9f9f9] dark:bg-[#1e1e1e] p-6 rounded-lg my-10 overflow-x-auto font-mono text-sm text-black dark:text-gray-200 border border-gray-100 dark:border-gray-800">
+                     <code>{block.data.code}</code>
+                 </pre>
+             );
         default:
             return null;
     }
@@ -58,8 +65,13 @@ const Article: React.FC = () => {
     const [newComment, setNewComment] = useState('');
     const [liked, setLiked] = useState(false);
     const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
-    const [isCopied, setIsCopied] = useState(false);
-    const [isPosting, setIsPosting] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    
+    // TTS State
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    
+    // UI State
+    const [heroVisible, setHeroVisible] = useState(true);
 
     const fetchArticle = async () => {
         if (!id) return;
@@ -69,8 +81,11 @@ const Article: React.FC = () => {
             const content = JSON.parse(doc.content);
             setBlocks(content.blocks);
             
+            // View Increment Logic
             const storageKey = `viewed_article_${id}`;
             if (!localStorage.getItem(storageKey)) {
+                setArticle(prev => prev ? {...prev, views: (prev.views || 0) + 1} : null);
+                
                 databases.updateDocument(DB_ID, CollectionIDs.ARTICLES, id, {
                     views: (doc.views || 0) + 1
                 }).catch(console.error);
@@ -80,6 +95,11 @@ const Article: React.FC = () => {
             try {
                 const authorData = await getProfile(doc.authorId);
                 setAuthorProfile(authorData as unknown as UserProfile);
+                
+                if (user && user.$id !== doc.authorId) {
+                    const followRecord = await checkIsFollowing(user.$id, doc.authorId);
+                    setIsFollowing(!!followRecord);
+                }
             } catch (e) {}
 
             if (user) {
@@ -102,6 +122,33 @@ const Article: React.FC = () => {
     };
 
     useEffect(() => { fetchArticle(); }, [id, user]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollY = window.scrollY;
+            if (scrollY > 400) setHeroVisible(false);
+            else setHeroVisible(true);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            window.speechSynthesis.cancel();
+        };
+    }, []);
+
+    const handleFollow = async () => {
+        if (!user || !article) return;
+        try {
+            const newState = await toggleFollow(user.$id, article.authorId);
+            setIsFollowing(newState);
+        } catch (e) {
+            alert("Error updating follow status");
+        }
+    };
 
     const handleLike = async () => {
         if (!user || !article) return;
@@ -126,19 +173,34 @@ const Article: React.FC = () => {
         } catch (e) {}
     };
 
-    const handleShare = async () => {
-        if (navigator.share) {
-            await navigator.share({ title: article?.title, url: window.location.href });
+    const toggleSpeech = () => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
         } else {
-            await navigator.clipboard.writeText(window.location.href);
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
+            // Strip HTML tags and combine text for smoother reading
+            const speechText = blocks.map(b => {
+                const text = b.data.text || "";
+                // Simple HTML tag strip
+                return text.replace(/<[^>]*>?/gm, '');
+            }).join('. ');
+
+            if (!speechText) return;
+
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            
+            utterance.onend = () => setIsSpeaking(false);
+            utterance.onerror = () => setIsSpeaking(false);
+            
+            // Cancel any pending speech before starting new
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+            setIsSpeaking(true);
         }
     };
 
     const postComment = async () => {
         if (!user || !article || !newComment.trim()) return;
-        setIsPosting(true);
         try {
             let currentProfile = profile;
             if (!currentProfile) await refreshProfile();
@@ -153,103 +215,176 @@ const Article: React.FC = () => {
             setComments([comment as unknown as Comment, ...comments]);
             setNewComment('');
         } catch (e) { alert("Failed to post"); }
-        finally { setIsPosting(false); }
     };
 
-    if (!article) return <div className="min-h-screen bg-white"><Navbar /><div className="flex justify-center pt-20"><Loader2 className="animate-spin text-gray-400"/></div></div>;
+    if (!article) return <div className="min-h-screen bg-white dark:bg-[#121212]"><Navbar /><div className="h-screen flex items-center justify-center font-serif text-gray-500">Loading story...</div></div>;
 
     const displayAuthorName = authorProfile?.name || article.authorName;
     const displayAuthorAvatar = authorProfile?.avatarUrl || article.authorAvatar;
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white dark:bg-[#121212] font-sans text-[#242424] dark:text-[#E0E0E0] transition-colors duration-300">
             <Navbar />
             
-            <article className="max-w-4xl mx-auto px-4 py-16">
-                <header className="mb-12 max-w-3xl mx-auto text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-4 mb-8">
-                        {article.tags?.map(tag => (
-                            <span key={tag} className="text-xs font-bold uppercase tracking-widest text-gray-500 border border-gray-200 px-3 py-1 rounded-full">{tag}</span>
-                        ))}
-                    </div>
-                    <h1 className="text-4xl md:text-6xl font-serif font-bold text-black mb-8 leading-tight">{article.title}</h1>
-                    
-                    <div className="flex items-center justify-center md:justify-start gap-4">
+            {/* HERO BANNER - Fading Background */}
+            <div className="relative w-full h-[60vh] md:h-[70vh] bg-gray-900">
+                {article.coverImage && (
+                    <>
+                        <img 
+                            src={article.coverImage} 
+                            alt="Cover" 
+                            className="absolute inset-0 w-full h-full object-cover opacity-80"
+                            style={{ objectPosition: 'center' }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-white dark:to-[#121212]"></div>
+                    </>
+                )}
+            </div>
+
+            {/* CONTENT CONTAINER - Scrolls over hero */}
+            <div className="relative z-10 -mt-40 md:-mt-56 max-w-[740px] mx-auto bg-white dark:bg-[#121212] rounded-t-[3rem] px-6 md:px-12 pt-16 pb-32 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] dark:shadow-none transition-colors">
+                
+                {/* Title */}
+                <h1 className="text-[36px] md:text-[52px] font-extrabold text-[#242424] dark:text-white mb-6 leading-[1.1] tracking-tight font-sans uppercase">
+                    {article.title}
+                </h1>
+                
+                {/* Subtitle */}
+                <h2 className="text-[22px] md:text-[24px] text-[#757575] dark:text-[#a0a0a0] font-sans font-normal leading-[1.4] mb-10">
+                     {article.summary || article.excerpt}
+                </h2>
+
+                {/* Author Metadata */}
+                <div className="flex items-center justify-between mb-14 border-b border-gray-100 dark:border-gray-800 pb-8">
+                    <div className="flex items-center gap-4">
                         <Link to={`/profile/${article.authorId}`}>
-                            <img src={displayAuthorAvatar} alt={displayAuthorName} className="w-12 h-12 rounded-full object-cover" />
+                            <img src={displayAuthorAvatar} alt={displayAuthorName} className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
                         </Link>
                         <div>
-                            <Link to={`/profile/${article.authorId}`} className="block font-medium text-black hover:underline">{displayAuthorName}</Link>
-                            <div className="text-sm text-gray-500 flex items-center gap-2">
-                                <span>{format(new Date(article.$createdAt), 'MMM d, yyyy')}</span>
-                                <span>•</span>
-                                <span>{Math.max(1, Math.ceil(blocks.length / 4))} min read</span>
+                            <div className="flex items-center gap-3 mb-1">
+                                <Link to={`/profile/${article.authorId}`} className="block font-bold text-[#242424] dark:text-white hover:underline font-sans text-lg">
+                                    {displayAuthorName}
+                                </Link>
+                                {user && user.$id !== article.authorId && (
+                                    <button 
+                                        onClick={handleFollow}
+                                        className={`text-sm font-medium px-3 py-1 rounded-full transition-all ${isFollowing 
+                                            ? 'border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400' 
+                                            : 'text-green-700 dark:text-green-500 hover:text-green-800'}`}
+                                    >
+                                        {isFollowing ? 'Following' : 'Follow'}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="text-[14px] text-[#757575] dark:text-[#999] font-sans flex items-center gap-2">
+                                 <span>{format(new Date(article.$createdAt), 'MMM d, yyyy')}</span>
+                                 <span>·</span>
+                                 <Eye size={16}/> <span>{article.views} views</span>
+                                 {user && (
+                                    <button 
+                                        onClick={toggleSpeech}
+                                        className={`ml-2 p-1 rounded-full transition-colors ${
+                                            isSpeaking 
+                                            ? 'bg-black text-white dark:bg-white dark:text-black' 
+                                            : 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white'
+                                        }`} 
+                                        title={isSpeaking ? "Stop Listening" : "Listen"}
+                                    >
+                                        {isSpeaking ? <StopCircle size={16}/> : <PlayCircle size={16}/>}
+                                    </button>
+                                 )}
                             </div>
                         </div>
                     </div>
-                </header>
 
-                {article.coverImage && (
-                    <div className="mb-16">
-                        <img src={article.coverImage} alt="Cover" className="w-full h-auto rounded-sm max-h-[600px] object-cover" />
+                    <div className="flex items-center gap-6 text-[#757575] dark:text-[#999]">
+                         <Share2 size={22} className="hover:text-black dark:hover:text-white cursor-pointer" strokeWidth={1.5} />
+                         <BookmarkPlus size={22} className="hover:text-black dark:hover:text-white cursor-pointer" strokeWidth={1.5} />
+                    </div>
+                </div>
+
+                {/* Article Content */}
+                <div className="article-content">
+                    {blocks.map((block, i) => <BlockRenderer key={block.id || i} block={block} />)}
+                </div>
+                
+                {/* Tags */}
+                {article.tags && article.tags.length > 0 && (
+                    <div className="mt-16 flex flex-wrap gap-2">
+                        {article.tags.map(tag => (
+                            <Link to={`/?q=${tag}`} key={tag} className="bg-[#f2f2f2] dark:bg-[#1e1e1e] px-4 py-2 rounded-full text-sm text-[#242424] dark:text-gray-300 hover:bg-[#e6e6e6] dark:hover:bg-[#2a2a2a] transition-colors">
+                                {tag}
+                            </Link>
+                        ))}
                     </div>
                 )}
 
-                <div className="max-w-[700px] mx-auto">
-                    {blocks.map((block, i) => <BlockRenderer key={block.id || i} block={block} />)}
-                </div>
-
-                <div className="max-w-[700px] mx-auto mt-16 pt-8 border-t border-gray-100 flex items-center justify-between">
-                     <div className="flex gap-6">
-                        <button onClick={handleLike} className="flex items-center gap-2 text-gray-500 hover:text-black transition-colors">
-                            <Heart size={24} fill={liked ? "black" : "none"} className={liked ? "text-black" : ""} />
-                            <span>{article.likesCount}</span>
+                {/* Engagement / Claps */}
+                <div className="mt-12 py-8 bg-white dark:bg-[#121212] border-t border-[#f2f2f2] dark:border-gray-800 flex items-center justify-between">
+                     <div className="flex gap-8">
+                        <button onClick={handleLike} className="flex items-center gap-2 text-[#757575] dark:text-[#a0a0a0] hover:text-black dark:hover:text-white transition-colors group">
+                            <div className="p-2 rounded-full group-hover:bg-gray-100 dark:group-hover:bg-gray-800 transition-colors">
+                                <Heart size={24} fill={liked ? (localStorage.getItem('theme') === 'dark' ? "white" : "black") : "none"} stroke="currentColor" />
+                            </div>
+                            <span className="font-medium text-lg">{article.likesCount}</span>
                         </button>
-                        <div className="flex items-center gap-2 text-gray-500">
-                             <MessageSquare size={24} />
-                             <span>{comments.length}</span>
-                        </div>
+                        <button className="flex items-center gap-2 text-[#757575] dark:text-[#a0a0a0] hover:text-black dark:hover:text-white transition-colors group">
+                             <div className="p-2 rounded-full group-hover:bg-gray-100 dark:group-hover:bg-gray-800 transition-colors">
+                                <MessageCircle size={24} />
+                             </div>
+                             <span className="font-medium text-lg">{comments.length}</span>
+                        </button>
                      </div>
-                     <button onClick={handleShare} className="text-gray-500 hover:text-black">
-                         {isCopied ? <Check size={24}/> : <Share2 size={24} />}
-                     </button>
                 </div>
                 
-                {/* Comments */}
-                <div className="max-w-[700px] mx-auto mt-16 bg-gray-50/50 p-8 rounded-xl">
-                    <h3 className="font-serif font-bold text-2xl mb-8">Responses</h3>
-                    {user && (
-                        <div className="mb-8">
+                {/* Responses */}
+                <div className="bg-[#fafafa] dark:bg-[#1a1a1a] -mx-6 md:-mx-12 px-6 md:px-12 py-12 rounded-b-[3rem] mt-4 transition-colors">
+                    <h3 className="font-bold text-xl mb-8 font-sans text-black dark:text-white">Responses ({comments.length})</h3>
+                    
+                    {user ? (
+                        <div className="bg-white dark:bg-[#242424] p-6 rounded-2xl shadow-soft border border-[#f2f2f2] dark:border-gray-700 mb-10">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src={profile?.avatarUrl} className="w-10 h-10 rounded-full"/>
+                                <span className="text-sm font-bold text-black dark:text-white">{profile?.name}</span>
+                            </div>
                             <textarea 
                                 value={newComment} 
                                 onChange={e => setNewComment(e.target.value)} 
-                                className="w-full p-4 border border-gray-200 rounded-lg focus:ring-1 focus:ring-black mb-2 font-serif text-lg bg-white"
+                                className="w-full border-none focus:ring-0 p-0 text-[#242424] dark:text-white placeholder-[#B3B3B1] dark:placeholder-gray-500 font-serif resize-none h-24 bg-transparent text-lg"
                                 placeholder="What are your thoughts?"
-                                rows={3}
                             />
-                            <button 
-                                onClick={postComment}
-                                disabled={isPosting || !newComment.trim()} 
-                                className="px-6 py-2 bg-black text-white rounded-full font-medium text-sm hover:bg-gray-800 disabled:opacity-50"
-                            >
-                                {isPosting ? "Posting..." : "Respond"}
-                            </button>
+                            <div className="flex justify-end mt-4">
+                                <button 
+                                    onClick={postComment}
+                                    disabled={!newComment.trim()} 
+                                    className="px-6 py-2 bg-[#1a8917] text-white rounded-full font-bold text-sm disabled:opacity-50 hover:bg-[#157312] transition-colors"
+                                >
+                                    Respond
+                                </button>
+                            </div>
                         </div>
+                    ) : (
+                         <div className="mb-10 p-8 bg-white dark:bg-[#242424] border border-[#f2f2f2] dark:border-gray-700 rounded-2xl text-center shadow-sm text-black dark:text-white">
+                             <Link to="/login" className="text-[#1a8917] font-bold hover:underline">Sign in</Link> to join the conversation.
+                         </div>
                     )}
-                    <div className="space-y-6">
+
+                    <div className="space-y-8">
                         {comments.map(c => (
-                            <div key={c.$id} className="border-b border-gray-100 last:border-0 pb-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <img src={c.userAvatar} className="w-8 h-8 rounded-full"/>
-                                    <span className="font-bold text-sm">{c.userName}</span>
-                                    <span className="text-gray-400 text-xs">{format(new Date(c.$createdAt), 'MMM d')}</span>
+                            <div key={c.$id} className="border-b border-gray-200 dark:border-gray-800 last:border-0 pb-8">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <img src={c.userAvatar} className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700"/>
+                                    <div>
+                                        <span className="block text-sm font-bold text-[#242424] dark:text-white font-sans">{c.userName}</span>
+                                        <span className="text-xs text-[#757575] dark:text-[#a0a0a0] font-sans">{format(new Date(c.$createdAt), 'MMM d')}</span>
+                                    </div>
                                 </div>
-                                <p className="font-serif text-gray-800">{c.content}</p>
+                                <p className="font-serif text-[#242424] dark:text-[#d0d0d0] text-[18px] leading-relaxed">{c.content}</p>
                             </div>
                         ))}
                     </div>
                 </div>
-            </article>
+            </div>
         </div>
     );
 };

@@ -7,7 +7,6 @@ interface EditorComponentProps {
   onChange: (data: OutputData) => void;
   holder: string;
   onReady?: () => void;
-  // Key prop is usually enough to force remount, but we'll accept `data` as the source of truth if `key` changes.
 }
 
 const EditorComponent: React.FC<EditorComponentProps> = ({ data, onChange, holder, onReady }) => {
@@ -112,7 +111,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({ data, onChange, holde
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holder]); 
 
-  return <div id={holder} className="prose prose-lg max-w-none font-serif" />;
+  return <div id={holder} className="prose prose-lg max-w-none font-serif dark:prose-invert" />;
 };
 
 export default memo(EditorComponent);

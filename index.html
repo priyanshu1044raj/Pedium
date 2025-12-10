@@ -3,68 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pedium - Premium Editorial</title>
+    <title>Pedium – Where good ideas find you.</title>
+    <!-- Keep Tailwind CDN for simplicity in this setup -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
-              serif: ['Playfair Display', 'serif'],
-              display: ['Playfair Display', 'serif'],
+              serif: ['Merriweather', 'serif'],
+              logo: ['Playfair Display', 'serif'],
             },
             colors: {
               brand: {
-                black: '#0f0f0f', 
-                dark: '#1a1a1a',
+                black: '#242424', 
+                dark: '#121212',
                 gray: '#757575',
-                light: '#f9f9f9',
-                border: '#e5e5e5',
-                surface: '#ffffff',
-                accent: '#0f0f0f' // Main action color is black for premium feel
+                lightgray: '#F9F9F9',
+                green: '#1a8917', 
+                yellow: '#FFC017',
               }
             },
-            animation: {
-              'fade-in-up': 'fadeInUp 0.5s ease-out',
+            borderRadius: {
+              '3xl': '1.5rem',
+              '4xl': '2rem',
             },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
+            boxShadow: {
+              'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
+              'soft-hover': '0 10px 25px rgba(0, 0, 0, 0.08)',
             },
             typography: {
               DEFAULT: {
                 css: {
                   maxWidth: '100%',
-                  color: '#262626',
-                  fontFamily: 'Playfair Display, serif', // Editor default to Serif for reading
+                  color: '#242424',
+                  fontFamily: 'Merriweather, serif',
+                  fontSize: '20px',
+                  lineHeight: '1.8',
                   h1: {
-                    fontFamily: 'Playfair Display, serif',
+                    fontFamily: 'Inter, sans-serif',
                     fontWeight: '700',
-                    color: '#0a0a0a',
+                    letterSpacing: '-0.025em',
+                    color: '#242424',
+                    lineHeight: '1.2',
                   },
                   h2: {
-                    fontFamily: 'Playfair Display, serif',
-                    fontWeight: '600',
-                    color: '#0a0a0a',
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: '700',
                     marginTop: '2em',
+                    marginBottom: '0.8em',
+                    lineHeight: '1.3',
                   },
                   p: {
-                    fontFamily: 'Playfair Display, serif',
-                    fontSize: '1.25rem',
-                    lineHeight: '2',
-                    color: '#333333',
+                    marginTop: '1.5em',
+                    marginBottom: '1.5em',
                   },
-                  blockquote: {
-                    fontStyle: 'italic',
-                    borderLeftColor: '#000',
-                    color: '#1a1a1a',
-                  }
                 },
               },
             },
@@ -77,75 +75,98 @@
         margin: 0;
         font-family: 'Inter', sans-serif;
         background-color: #ffffff;
-        color: #0f0f0f;
+        color: #242424;
         -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
       }
       
-      /* Refined Scrollbar */
-      ::-webkit-scrollbar {
-        width: 6px;
+      .dark body {
+        background-color: #121212;
+        color: #e5e5e5;
       }
-      ::-webkit-scrollbar-track {
-        background: transparent; 
+      
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Editor Content Width */
+      .ce-block__content { max-width: 680px; margin: 0 auto; }
+      .ce-toolbar__content { max-width: 680px; margin: 0 auto; }
+      
+      .ce-header { 
+        font-family: 'Inter', sans-serif; 
+        letter-spacing: -0.02em; 
+        font-weight: 700; 
+        padding-bottom: 0.5em !important;
       }
-      ::-webkit-scrollbar-thumb {
-        background: #d4d4d4; 
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #a3a3a3; 
+      .ce-paragraph { 
+        font-family: 'Merriweather', serif; 
+        font-size: 20px; 
+        line-height: 1.8; 
+        color: #292929;
+        padding-bottom: 0.5em !important;
       }
 
-      /* Editor JS Specifics for Premium Feel */
-      .ce-block__content { max-width: 700px; margin: 0 auto; }
-      .ce-toolbar__content { max-width: 700px; margin: 0 auto; }
-      
-      .ce-header {
-        font-family: 'Playfair Display', serif;
+      /* Dark Mode Overrides for EditorJS */
+      .dark .ce-paragraph { color: #d4d4d4; }
+      .dark .ce-header { color: #ffffff; }
+      .dark .ce-inline-tool { color: #000; } /* Keep toolbar tools readable */
+      .dark .ce-toolbar__plus, .dark .ce-toolbar__settings-btn {
+          color: #9ca3af;
       }
-      
-      .ce-paragraph {
-        font-family: 'Playfair Display', serif; /* Editorial feel for reading */
-        font-size: 1.25rem;
-        line-height: 1.8;
+      .dark .ce-toolbar__plus:hover, .dark .ce-toolbar__settings-btn:hover {
+          color: #fff;
       }
+      .dark .cdx-marker { background: rgba(255, 255, 0, 0.2); color: #fff; }
+      .dark .ce-block--selected .ce-block__content { background: #262626; }
+      
+      input:focus, textarea:focus { outline: none; }
 
-      /* Clean inputs */
-      input:focus, textarea:focus {
-        outline: none;
+      /* Fade effect utilities */
+      .fade-overlay {
+        background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 95%);
+      }
+      .dark .fade-overlay {
+        background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(18,18,18,0) 50%, rgba(18,18,18,1) 95%);
       }
     </style>
-    <script type="importmap">
+  <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.21.0?external=react,react-dom",
-    "appwrite": "https://esm.sh/appwrite@16.0.2",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://aistudiocdn.com/vite@^7.2.7",
+    "date-fns": "https://aistudiocdn.com/date-fns@^4.1.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.294.0?external=react",
-    "date-fns": "https://esm.sh/date-fns@3.0.0",
-    "@editorjs/editorjs": "https://esm.sh/@editorjs/editorjs@2.28.2",
-    "@editorjs/header": "https://esm.sh/@editorjs/header@2.8.1",
-    "@editorjs/list": "https://esm.sh/@editorjs/list@1.9.0",
-    "@editorjs/image": "https://esm.sh/@editorjs/image@2.9.0",
-    "@editorjs/quote": "https://esm.sh/@editorjs/quote@2.6.0",
-    "@editorjs/embed": "https://esm.sh/@editorjs/embed@2.7.0",
-    "@editorjs/delimiter": "https://esm.sh/@editorjs/delimiter@1.4.0",
-    "@editorjs/checklist": "https://esm.sh/@editorjs/checklist@1.6.0",
-    "@editorjs/marker": "https://esm.sh/@editorjs/marker@1.4.0",
-    "@editorjs/inline-code": "https://esm.sh/@editorjs/inline-code@1.5.0",
-    "@editorjs/code": "https://esm.sh/@editorjs/code@2.9.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/"
+    "@editorjs/delimiter": "https://aistudiocdn.com/@editorjs/delimiter@^1.4.2",
+    "@editorjs/inline-code": "https://aistudiocdn.com/@editorjs/inline-code@^1.5.2",
+    "@editorjs/image": "https://aistudiocdn.com/@editorjs/image@^2.10.3",
+    "@editorjs/embed": "https://aistudiocdn.com/@editorjs/embed@^2.8.0",
+    "appwrite": "https://aistudiocdn.com/appwrite@^21.5.0",
+    "@editorjs/editorjs": "https://aistudiocdn.com/@editorjs/editorjs@^2.31.0",
+    "@editorjs/quote": "https://aistudiocdn.com/@editorjs/quote@^2.7.6",
+    "@editorjs/marker": "https://aistudiocdn.com/@editorjs/marker@^1.4.0",
+    "@editorjs/checklist": "https://aistudiocdn.com/@editorjs/checklist@^1.6.0",
+    "@editorjs/header": "https://aistudiocdn.com/@editorjs/header@^2.8.8",
+    "@editorjs/code": "https://aistudiocdn.com/@editorjs/code@^2.9.3",
+    "@editorjs/list": "https://aistudiocdn.com/@editorjs/list@^2.0.9"
   }
 }
 </script>
-  </head>
+</head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      // Immediate theme check to prevent flash
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
   </body>
 </html>

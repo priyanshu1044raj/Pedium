@@ -116,7 +116,16 @@ export const generateArticleContent = async (topic: string): Promise<any> => {
 
 export const generateTags = async (title: string, content: string): Promise<string[]> => {
     try {
-        const prompt = `Analyze the following article title and content. Generate 3 to 5 relevant, single-word or two-word tags (lowercase). Return ONLY the tags separated by commas. 
+        // Enforce specific categories
+        const predefinedCategories = ["Programming", "AI", "Design", "Psychology", "Money", "Business"];
+        
+        const prompt = `Analyze the following article title and content.
+        
+        Task 1: Assign exactly ONE primary category from this list: [${predefinedCategories.join(', ')}].
+        Task 2: Generate 2-3 additional relevant, specific tags (lowercase).
+        
+        Return ONLY the tags separated by commas, starting with the primary category.
+        
         Title: ${title}
         Content Snippet: ${content.substring(0, 500)}...`;
         
@@ -128,7 +137,8 @@ export const generateTags = async (title: string, content: string): Promise<stri
         const text = response.text || "";
         // Clean up text and split
         const tags = text.split(',')
-            .map(t => t.trim().toLowerCase().replace(/[^a-z0-9 ]/g, ''))
+            .map(t => t.trim().replace(/[^a-zA-Z0-9 ]/g, '')) // Remove special chars but keep spaces/case for readability logic if needed, though usually we lowercase. 
+            // However, the prompt asks for specific Capitalized categories. Let's keep the first one capitalized if it matches, others lowercase.
             .filter(t => t.length > 0 && t.length < 20)
             .slice(0, 5);
             

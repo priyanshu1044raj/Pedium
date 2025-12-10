@@ -63,7 +63,7 @@ const Write: React.FC = () => {
             };
             localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
             setDraftStatus('Saved');
-        }, 1500); // Save after 1.5s of inactivity
+        }, 1500);
 
         return () => clearTimeout(timeoutId);
     }, [title, tags, editorData]);
@@ -249,13 +249,13 @@ const Write: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-white pb-32">
+        <div className="min-h-screen bg-white dark:bg-[#121212] pb-32 transition-colors">
             <Navbar />
             
-            <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 py-4 px-4 sm:px-8">
+            <div className="sticky top-20 z-30 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 py-4 px-4 sm:px-8">
                 <div className="max-w-4xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <span className="text-gray-500 text-sm font-medium">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
                             Draft <span className="mx-2">•</span> {user.name}
                         </span>
                         {draftStatus && (
@@ -267,7 +267,7 @@ const Write: React.FC = () => {
                     <div className="flex items-center gap-4">
                          <button
                             onClick={() => setShowAiModal(true)}
-                            className="text-gray-500 hover:text-black transition-colors"
+                            className="text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors"
                             title="AI Assistant"
                         >
                             <Sparkles size={20} />
@@ -290,21 +290,21 @@ const Write: React.FC = () => {
                              <img src={coverImage} alt="Cover" className="w-full h-full object-cover rounded-sm" />
                              <button 
                                 onClick={() => setCoverImage(null)} 
-                                className="absolute top-4 right-4 bg-white/90 p-2 rounded-full text-red-500 shadow-sm hover:bg-white transition-all"
+                                className="absolute top-4 right-4 bg-white/90 dark:bg-black/90 p-2 rounded-full text-red-500 shadow-sm hover:bg-white dark:hover:bg-black transition-all"
                              >
                                 <X size={18} />
                              </button>
                         </div>
                     ) : (
                         <div className="flex gap-4 mb-8">
-                             <label className="cursor-pointer text-sm text-gray-500 flex items-center gap-2 hover:text-black transition-colors">
+                             <label className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 hover:text-black dark:hover:text-white transition-colors">
                                 <ImagePlus size={18} /> Add Cover
                                 <input type="file" className="hidden" onChange={handleCoverUpload} accept="image/*" />
                             </label>
                             <button 
                                 onClick={handleAiGenerateCover}
                                 disabled={!title}
-                                className="text-sm text-gray-500 flex items-center gap-2 hover:text-black transition-colors disabled:opacity-50"
+                                className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 hover:text-black dark:hover:text-white transition-colors disabled:opacity-50"
                             >
                                 <Sparkles size={18} /> Generate Cover
                             </button>
@@ -316,17 +316,17 @@ const Write: React.FC = () => {
                         placeholder="Title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="text-5xl md:text-6xl font-serif font-bold w-full outline-none placeholder-gray-300 text-black mb-6 bg-transparent leading-tight"
+                        className="text-5xl md:text-6xl font-serif font-bold w-full outline-none placeholder-gray-300 dark:placeholder-gray-600 text-black dark:text-white mb-6 bg-transparent leading-tight"
                     />
                     
-                    <div className="flex items-center gap-2 text-gray-400 mb-8 border-b border-gray-100 pb-2">
+                    <div className="flex items-center gap-2 text-gray-400 mb-8 border-b border-gray-100 dark:border-gray-800 pb-2">
                         <Tag size={16} />
                         <input
                             type="text"
                             placeholder="Add topics..."
                             value={tags}
                             onChange={(e) => setTags(e.target.value)}
-                            className="text-base text-gray-600 w-full outline-none bg-transparent font-medium"
+                            className="text-base text-gray-600 dark:text-gray-300 w-full outline-none bg-transparent font-medium"
                         />
                     </div>
                 </div>
@@ -349,22 +349,22 @@ const Write: React.FC = () => {
 
             {/* AI Modal */}
             {showAiModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl border border-gray-100">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-[#1E1E1E] rounded-xl p-8 w-full max-w-lg shadow-2xl border border-gray-100 dark:border-gray-800">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-serif font-bold">AI Writing Assistant</h3>
-                            <button onClick={() => setShowAiModal(false)}><X size={20} className="text-gray-400 hover:text-black"/></button>
+                            <h3 className="text-xl font-serif font-bold text-black dark:text-white">AI Writing Assistant</h3>
+                            <button onClick={() => setShowAiModal(false)}><X size={20} className="text-gray-400 hover:text-black dark:hover:text-white"/></button>
                         </div>
                         <textarea
                             value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
                             placeholder="Describe what you want to write about..."
-                            className="w-full border border-gray-200 rounded-lg p-4 h-32 mb-6 focus:ring-1 focus:ring-black focus:border-black outline-none resize-none font-serif text-lg"
+                            className="w-full border border-gray-200 dark:border-gray-700 dark:bg-[#2A2A2A] dark:text-white rounded-lg p-4 h-32 mb-6 focus:ring-1 focus:ring-black dark:focus:ring-white focus:border-black dark:focus:border-white outline-none resize-none font-serif text-lg"
                         />
                         <button 
                             onClick={handleAiWriteArticle}
                             disabled={isAiWriting || !aiPrompt.trim()}
-                            className="w-full py-3 bg-black text-white font-medium rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                             {isAiWriting ? <Loader2 className="animate-spin" size={18}/> : <Sparkles size={18}/>}
                             Generate Draft

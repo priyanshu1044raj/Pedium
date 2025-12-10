@@ -1,42 +1,114 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
-import { databases, DB_ID, CollectionIDs, Query, getProfile } from '../lib/appwrite';
+import { databases, DB_ID, CollectionIDs, Query, getProfile, checkIsFollowing, toggleFollow } from '../lib/appwrite';
 import { Article, UserProfile } from '../types';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowRight, PenTool } from 'lucide-react';
+import { BookmarkPlus, MessageCircle, Heart, ArrowUpRight, Sparkles, TrendingUp, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface EnrichedArticle extends Article {
     realAuthorAvatar?: string;
     realAuthorName?: string;
+    realAuthorBio?: string;
 }
+
+const FollowButton: React.FC<{ authorId: string }> = ({ authorId }) => {
+    const { user } = useAuth();
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (user && user.$id !== authorId) {
+            checkIsFollowing(user.$id, authorId).then(res => setIsFollowing(!!res));
+        }
+    }, [user, authorId]);
+
+    const handleClick = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!user) return alert("Please sign in to follow authors.");
+        setLoading(true);
+        try {
+            const newState = await toggleFollow(user.$id, authorId);
+            setIsFollowing(newState);
+        } catch(e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    if (!user || user.$id === authorId) return null;
+
+    return (
+        <button 
+            onClick={handleClick}
+            disabled={loading}
+            className={`text-xs font-bold rounded-full px-4 py-1.5 transition-all ${
+                isFollowing 
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' 
+                : 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200'
+            }`}
+        >
+            {isFollowing ? 'Following' : 'Follow'}
+        </button>
+    );
+};
 
 const Home: React.FC = () => {
     const { user } = useAuth();
     const [articles, setArticles] = useState<EnrichedArticle[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    // Filters: 'latest', 'trending', 'for_you' OR specific tag via searchParams
+    const [feedType, setFeedType] = useState<'latest' | 'trending' | 'for_you'>('latest');
     const searchQuery = searchParams.get('q');
+    
+    // Sidebar State
+    const [topAuthors, setTopAuthors] = useState<UserProfile[]>([]);
 
     useEffect(() => {
-        const fetchArticles = async () => {
+        const fetchContent = async () => {
             setLoading(true);
             try {
+                let queries: string[] = [];
+
+                if (searchQuery) {
+                    queries = [Query.orderDesc('$createdAt'), Query.limit(100)];
+                } else if (feedType === 'trending') {
+                    queries = [Query.orderDesc('views'), Query.limit(20)];
+                } else if (feedType === 'for_you' && user) {
+                    const follows = await databases.listDocuments(DB_ID, CollectionIDs.FOLLOWS, [
+                        Query.equal('follower_id', user.$id)
+                    ]);
+                    const followingIds = follows.documents.map((d: any) => d.following_id);
+                    
+                    if (followingIds.length > 0) {
+                        queries = [
+                            Query.equal('authorId', followingIds),
+                            Query.orderDesc('$createdAt'),
+                            Query.limit(20)
+                        ];
+                    } else {
+                        setArticles([]);
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    queries = [Query.orderDesc('$createdAt'), Query.limit(20)];
+                }
+
                 const response = await databases.listDocuments(
                     DB_ID, 
                     CollectionIDs.ARTICLES, 
-                    [Query.orderDesc('$createdAt'), Query.limit(searchQuery ? 100 : 20)]
+                    queries
                 );
                 
                 let filteredDocs = response.documents as unknown as Article[];
-
+                
                 if (searchQuery) {
                     const lowerQ = searchQuery.toLowerCase();
                     filteredDocs = filteredDocs.filter((d) => 
                         d.title.toLowerCase().includes(lowerQ) || 
-                        d.tags?.some(tag => tag.toLowerCase().includes(lowerQ)) ||
-                        d.content.toLowerCase().includes(lowerQ)
+                        d.tags?.some(tag => tag.toLowerCase().includes(lowerQ))
                     );
                 }
                 
@@ -46,7 +118,8 @@ const Home: React.FC = () => {
                         return {
                             ...art,
                             realAuthorAvatar: authorProfile?.avatarUrl || art.authorAvatar,
-                            realAuthorName: authorProfile?.name || art.authorName
+                            realAuthorName: authorProfile?.name || art.authorName,
+                            realAuthorBio: authorProfile?.bio
                         };
                     } catch {
                         return { ...art, realAuthorAvatar: art.authorAvatar, realAuthorName: art.authorName };
@@ -54,6 +127,10 @@ const Home: React.FC = () => {
                 }));
 
                 setArticles(enriched);
+
+                const authorRes = await databases.listDocuments(DB_ID, CollectionIDs.PROFILES, [Query.limit(4), Query.orderDesc('followersCount')]);
+                setTopAuthors(authorRes.documents as unknown as UserProfile[]);
+
             } catch (error) {
                 console.error(error);
             } finally {
@@ -61,123 +138,240 @@ const Home: React.FC = () => {
             }
         };
 
-        fetchArticles();
-    }, [searchQuery]);
+        fetchContent();
+    }, [searchQuery, feedType, user]);
 
-    // Categories
-    const categories = ["Technology", "Design", "Culture", "Business", "Politics", "Science", "Health"];
+    const recommendedTopics = ["Programming", "AI", "Design", "Psychology", "Money", "Business"];
+
+    const handleTabChange = (type: 'latest' | 'trending' | 'for_you') => {
+        setSearchParams({});
+        setFeedType(type);
+    };
 
     return (
-        <div className="min-h-screen bg-white text-brand-black">
+        <div className="min-h-screen bg-[#F9F9F9] dark:bg-[#121212] text-brand-black dark:text-[#E0E0E0] font-sans transition-colors duration-300">
             <Navbar />
             
-            {/* Minimalist Hero - Only if not searching */}
-            {!searchQuery && (
-                <div className="border-b border-gray-100">
-                    <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-20 md:py-28">
-                        {!user ? (
-                            <div className="max-w-4xl">
-                                <h1 className="text-6xl md:text-8xl font-serif font-medium tracking-tight leading-[1.1] mb-8 text-black">
-                                    Stay curious.
-                                </h1>
-                                <p className="text-xl md:text-2xl text-gray-600 font-sans font-light max-w-2xl mb-10 leading-relaxed">
-                                    Discover stories, thinking, and expertise from writers on any topic.
-                                </p>
-                                <Link to="/register" className="inline-block bg-black text-white px-10 py-4 rounded-full text-lg font-medium hover:bg-gray-800 transition-all">
-                                    Start reading
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="max-w-4xl">
-                                <h1 className="text-5xl md:text-7xl font-serif font-medium tracking-tight leading-[1.1] text-black">
-                                    Welcome back, <br/>
-                                    <span className="text-gray-400 italic">{user.name.split(' ')[0]}.</span>
-                                </h1>
-                            </div>
-                        )}
+            {/* Elegant Hero (Logged Out Only) */}
+            {!user && !searchQuery && feedType === 'latest' && (
+                <div className="bg-white dark:bg-[#1E1E1E] border-b border-gray-200 dark:border-gray-800 transition-colors">
+                    <div className="max-w-6xl mx-auto px-6 py-24 text-center">
+                        <h1 className="text-5xl md:text-7xl font-logo font-bold tracking-tight mb-6 text-gray-900 dark:text-white uppercase">
+                            Where ideas find their home.
+                        </h1>
+                        <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 font-serif mb-10 max-w-2xl mx-auto leading-relaxed">
+                            Discover stories, thinking, and expertise from writers on any topic.
+                        </p>
+                        <Link to="/register" className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-full text-lg font-bold hover:scale-105 transition-transform shadow-lg shadow-gray-200 dark:shadow-none">
+                            Start Reading <ArrowUpRight size={20} />
+                        </Link>
                     </div>
                 </div>
             )}
 
-            {/* Categories Sticky Bar */}
-            {!searchQuery && (
-                <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-                     <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 overflow-x-auto no-scrollbar py-4">
-                        <div className="flex items-center gap-8">
-                            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Discover</span>
-                            {categories.map(cat => (
-                                <Link to={`/?q=${cat}`} key={cat} className="text-sm font-medium text-gray-500 hover:text-black transition-colors whitespace-nowrap">
-                                    {cat}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    
+                    {/* FEED COLUMN (Left - 8 Cols) */}
+                    <div className="lg:col-span-8">
+                        
+                        {/* Feed Filter Tabs */}
+                        <div className="flex items-center gap-4 mb-8 overflow-x-auto no-scrollbar pb-2">
+                            <button 
+                                onClick={() => handleTabChange('for_you')}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-sm transition-colors flex-shrink-0 ${
+                                    feedType === 'for_you' && !searchQuery 
+                                    ? 'bg-black text-white dark:bg-white dark:text-black' 
+                                    : 'bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                            >
+                                <Sparkles size={16} /> For You
+                            </button>
+                            <button 
+                                onClick={() => handleTabChange('trending')}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-sm transition-colors flex-shrink-0 ${
+                                    feedType === 'trending' && !searchQuery 
+                                    ? 'bg-black text-white dark:bg-white dark:text-black' 
+                                    : 'bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                            >
+                                <TrendingUp size={16} /> Trending
+                            </button>
+                            {recommendedTopics.map(topic => (
+                                <Link 
+                                    to={`/?q=${topic}`} 
+                                    key={topic} 
+                                    className={`px-5 py-2.5 rounded-full text-sm font-medium shadow-sm transition-colors flex-shrink-0 ${
+                                        searchQuery === topic 
+                                        ? 'bg-black text-white dark:bg-white dark:text-black font-bold' 
+                                        : 'bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    }`}
+                                >
+                                    {topic}
                                 </Link>
                             ))}
                         </div>
-                     </div>
-                </div>
-            )}
 
-            <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-16">
-                {searchQuery && (
-                    <div className="mb-16 border-b border-gray-100 pb-8">
-                        <p className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-2">Search Results</p>
-                        <h2 className="text-4xl font-serif font-bold text-black">"{searchQuery}"</h2>
-                    </div>
-                )}
+                        {/* Articles Feed */}
+                        <div className="space-y-8">
+                            {loading ? (
+                                [1, 2].map(i => <div key={i} className="h-64 bg-white dark:bg-[#1E1E1E] rounded-3xl animate-pulse shadow-sm"></div>)
+                            ) : articles.length > 0 ? (
+                                articles.map((article) => (
+                                    <article key={article.$id} className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-gray-100 dark:hover:border-gray-800 group">
+                                        
+                                        {/* Header */}
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <Link to={`/profile/${article.authorId}`} className="block relative">
+                                                    <img src={article.realAuthorAvatar} className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700"/>
+                                                </Link>
+                                                <div>
+                                                    <Link to={`/profile/${article.authorId}`} className="block text-sm font-bold text-gray-900 dark:text-white hover:underline">
+                                                        {article.realAuthorName}
+                                                    </Link>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1">
+                                                        {format(new Date(article.$createdAt), 'MMM d')} 
+                                                        <span className="mx-1">·</span> 
+                                                        <Eye size={12} /> {article.views} views
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button className="text-gray-400 hover:text-black dark:hover:text-white p-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                    <BookmarkPlus size={20} strokeWidth={1.5} />
+                                                </button>
+                                            </div>
+                                        </div>
 
-                {/* Articles Grid - Premium Bento/Masonry Style */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16">
-                    {loading ? [1,2,3,4,5,6].map(i => (
-                        <div key={i} className="animate-pulse space-y-4">
-                            <div className="bg-gray-100 h-64 w-full rounded-sm"></div>
-                            <div className="h-4 bg-gray-100 w-3/4"></div>
-                            <div className="h-4 bg-gray-100 w-1/2"></div>
-                        </div>
-                    )) : articles.map((article, index) => (
-                        <Link to={`/article/${article.$id}`} key={article.$id} className="group flex flex-col h-full cursor-pointer">
-                            <div className="relative overflow-hidden mb-6 rounded-sm aspect-[16/10]">
-                                <img 
-                                    src={article.coverImage} 
-                                    alt="Cover" 
-                                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" 
-                                />
-                                {article.tags?.[0] && (
-                                    <div className="absolute top-4 left-4 bg-white text-black text-[10px] font-bold px-3 py-1 uppercase tracking-widest">
-                                        {article.tags[0]}
+                                        {/* Main Content Area */}
+                                        <Link to={`/article/${article.$id}`} className="block group cursor-pointer">
+                                            <div className="flex flex-col-reverse md:flex-row gap-6">
+                                                <div className="flex-1">
+                                                    <h2 className="text-2xl md:text-[28px] font-bold text-gray-900 dark:text-gray-100 mb-3 font-sans leading-tight tracking-tight group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors uppercase">
+                                                        {article.title}
+                                                    </h2>
+                                                    <p className="text-gray-500 dark:text-gray-400 font-serif text-[18px] leading-relaxed line-clamp-3 mb-4 md:mb-0">
+                                                        {article.summary || article.excerpt}
+                                                    </p>
+                                                </div>
+                                                {article.coverImage && (
+                                                    <div className="w-full md:w-[200px] h-48 md:h-[140px] flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                                        <img 
+                                                            src={article.coverImage} 
+                                                            alt="" 
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Link>
+
+                                        {/* Footer / Tags */}
+                                        <div className="mt-6 pt-4 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
+                                            <div className="flex gap-2 flex-wrap">
+                                                {article.tags?.slice(0, 3).map(tag => (
+                                                    <Link to={`/?q=${tag}`} key={tag} className="px-3 py-1 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                                        {tag}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-6 text-gray-400 text-sm font-medium">
+                                                <div className="flex items-center gap-1.5 hover:text-red-500 transition-colors cursor-pointer">
+                                                    <Heart size={18} strokeWidth={2} /> 
+                                                    <span>{article.likesCount}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 hover:text-blue-500 transition-colors cursor-pointer">
+                                                    <MessageCircle size={18} strokeWidth={2} />
+                                                    <span>Reply</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                ))
+                            ) : (
+                                <div className="text-center py-24 bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-sm">
+                                    <div className="inline-block p-4 bg-gray-50 dark:bg-gray-800 rounded-full mb-4">
+                                        <Sparkles size={32} className="text-gray-300 dark:text-gray-600" />
                                     </div>
-                                )}
-                            </div>
-                            
-                            <div className="flex flex-col flex-grow">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <img src={article.realAuthorAvatar} alt="" className="w-6 h-6 rounded-full object-cover" />
-                                    <span className="text-xs font-bold text-gray-900 uppercase tracking-wide">{article.realAuthorName}</span>
-                                    <span className="text-xs text-gray-300">•</span>
-                                    <span className="text-xs text-gray-400 font-medium">{format(new Date(article.$createdAt), 'MMM d')}</span>
+                                    <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-white">
+                                        {feedType === 'for_you' ? "No following updates." : "No stories found."}
+                                    </h3>
+                                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                                        {feedType === 'for_you' 
+                                            ? "Follow authors to see their stories here." 
+                                            : "Try a different search or explore topics."}
+                                    </p>
+                                    {feedType === 'for_you' && (
+                                        <Link to="/authors" className="text-black dark:text-white font-bold hover:underline">
+                                            Browse Authors
+                                        </Link>
+                                    )}
+                                    {searchQuery && (
+                                        <button onClick={() => { setSearchParams({}); }} className="text-black dark:text-white font-bold hover:underline">
+                                            Clear Filters
+                                        </button>
+                                    )}
                                 </div>
-                                
-                                <h3 className="text-2xl font-serif font-bold text-black mb-3 leading-tight group-hover:underline decoration-1 underline-offset-4 decoration-gray-300">
-                                    {article.title}
-                                </h3>
-                                
-                                <p className="text-gray-500 font-serif text-lg leading-relaxed mb-6 line-clamp-3">
-                                    {article.summary || article.excerpt}
-                                </p>
-                                
-                                <div className="mt-auto flex items-center text-sm font-medium text-black group-hover:opacity-70 transition-opacity">
-                                    Read story <ArrowRight size={16} className="ml-2" />
-                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* SIDEBAR COLUMN (Right - 4 Cols) */}
+                    <div className="hidden lg:block lg:col-span-4 space-y-8">
+                        
+                        {/* Top Authors Widget */}
+                        <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 sticky top-24 transition-colors">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                                <Sparkles size={18} className="text-yellow-500" fill="currentColor"/> 
+                                Writers to follow
+                            </h3>
+                            <div className="space-y-6">
+                                {topAuthors.map(author => (
+                                    <div key={author.$id} className="flex items-start justify-between gap-3">
+                                        <div className="flex gap-3 overflow-hidden">
+                                            <img src={author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-gray-100 dark:bg-gray-800"/>
+                                            <div className="min-w-0">
+                                                <Link to={`/profile/${author.userId}`} className="block text-sm font-bold text-gray-900 dark:text-white truncate hover:underline">{author.name}</Link>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{author.bio || "Writer"}</p>
+                                            </div>
+                                        </div>
+                                        <FollowButton authorId={author.userId} />
+                                    </div>
+                                ))}
                             </div>
-                        </Link>
-                    ))}
+                            <div className="mt-6 pt-6 border-t border-gray-50 dark:border-gray-800">
+                                <Link to="/authors" className="text-sm font-bold text-green-700 dark:text-green-500 hover:text-green-800 flex items-center gap-1">
+                                    See all writers <ArrowUpRight size={14}/>
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Topics Widget */}
+                        <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Discover Topics</h3>
+                             <div className="flex flex-wrap gap-2">
+                                {recommendedTopics.map(topic => (
+                                    <Link to={`/?q=${topic}`} key={topic} className="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-black dark:hover:text-white transition-colors">
+                                        {topic}
+                                    </Link>
+                                ))}
+                             </div>
+                        </div>
+                        
+                        {/* Footer Links */}
+                        <div className="flex flex-wrap gap-4 text-xs text-gray-400 dark:text-gray-600 px-2">
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Help</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Status</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Writers</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Blog</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Privacy</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">Terms</a>
+                            <a href="#" className="hover:text-gray-600 dark:hover:text-gray-400">About</a>
+                        </div>
+
+                    </div>
                 </div>
-                
-                {!loading && articles.length === 0 && !searchQuery && (
-                     <div className="text-center py-32 border-t border-gray-100 mt-10">
-                         <PenTool size={48} className="text-gray-300 mx-auto mb-6" />
-                         <h3 className="text-2xl font-serif font-bold text-black mb-4">It's quiet here.</h3>
-                         <p className="text-gray-500 mb-8 max-w-md mx-auto">Be the first to publish a masterpiece on Pedium.</p>
-                         <Link to="/write" className="bg-black text-white px-8 py-3 rounded-full font-medium inline-block hover:bg-gray-800 transition-colors">Start Writing</Link>
-                     </div>
-                )}
             </div>
         </div>
     );

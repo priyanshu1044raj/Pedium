@@ -3,7 +3,7 @@ import { account, databases, uploadFile, ID, DB_ID, CollectionIDs } from '../lib
 import { generateAvatar } from '../lib/gemini';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight, X } from 'lucide-react';
 
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -27,14 +27,10 @@ const Auth: React.FC = () => {
                 await refreshProfile();
                 navigate('/');
             } else {
-                // Registration
                 const userId = ID.unique();
                 await account.create(userId, email, password, name);
-                
-                // Login immediately to create profile
                 await account.createEmailPasswordSession(email, password);
 
-                // Generate AI Avatar
                 let avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
                 try {
                    const aiAvatarBase64 = await generateAvatar(name);
@@ -48,7 +44,6 @@ const Auth: React.FC = () => {
                     console.error("AI Avatar failed, falling back to default", err);
                 }
 
-                // Create User Profile in DB
                 await databases.createDocument(DB_ID, CollectionIDs.PROFILES, ID.unique(), {
                     userId: userId,
                     name: name,
@@ -69,92 +64,87 @@ const Auth: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-white">
-            <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 w-full max-w-[600px] border-r border-gray-100">
-                <div className="mx-auto w-full max-w-sm lg:w-96">
-                    <div>
-                        <Link to="/" className="inline-block mb-8">
-                             <h1 className="text-3xl font-display font-bold tracking-tight text-brand-dark">Pedium</h1>
-                        </Link>
-                        <h2 className="text-3xl font-display font-bold text-gray-900">
-                            {isLogin ? 'Welcome back' : 'Start your journey'}
-                        </h2>
-                        <p className="mt-2 text-sm text-gray-600">
-                            {isLogin ? "Enter your details to access your account." : "Join thousands of writers and readers today."}
+        <div className="fixed inset-0 bg-white dark:bg-[#121212] z-[100] overflow-y-auto transition-colors">
+            {/* Close Button */}
+            <Link to="/" className="absolute top-8 right-8 text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                <X size={24} />
+            </Link>
+
+            <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
+                <div className="w-full max-w-[400px]">
+                    <div className="text-center mb-10">
+                        <h1 className="font-serif text-4xl font-normal text-brand-black dark:text-white mb-4">
+                            {isLogin ? 'Welcome back.' : 'Join Pedium.'}
+                        </h1>
+                        <p className="text-brand-black/60 dark:text-gray-400 font-sans text-base">
+                            {isLogin ? "Sign in to access your personalized homepage." : "Create an account to start writing and reading."}
                         </p>
                     </div>
 
-                    <div className="mt-8">
-                        {error && <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-lg mb-6 text-sm flex items-center">{error}</div>}
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {!isLogin && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-all"
-                                        required
-                                        placeholder="Jane Doe"
-                                    />
-                                </div>
-                            )}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-all"
-                                    required
-                                    placeholder="you@example.com"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-all"
-                                    required
-                                    minLength={8}
-                                    placeholder="••••••••"
-                                />
-                            </div>
-
-                            <div>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg shadow-brand-primary/20 text-sm font-bold text-white bg-brand-primary hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 transition-all transform hover:-translate-y-0.5"
-                                >
-                                    {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Sign In' : 'Create Account')}
-                                </button>
-                            </div>
-                        </form>
-
-                        <div className="mt-8 text-center">
-                            <button
-                                onClick={() => {
-                                    setIsLogin(!isLogin);
-                                    setError('');
-                                }}
-                                className="text-sm font-medium text-brand-primary hover:text-brand-secondary flex items-center justify-center w-full gap-1"
-                            >
-                                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"} <ArrowRight size={14}/>
-                            </button>
+                    {error && (
+                        <div className="mb-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-3 rounded text-sm text-center">
+                            {error}
                         </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {!isLogin && (
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Name</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full border-b border-gray-300 dark:border-gray-700 py-2 focus:outline-none focus:border-black dark:focus:border-white transition-colors bg-transparent placeholder-gray-300 dark:placeholder-gray-600 text-lg font-serif text-black dark:text-white"
+                                    required
+                                    placeholder="Your Name"
+                                />
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full border-b border-gray-300 dark:border-gray-700 py-2 focus:outline-none focus:border-black dark:focus:border-white transition-colors bg-transparent placeholder-gray-300 dark:placeholder-gray-600 text-lg font-serif text-black dark:text-white"
+                                required
+                                placeholder="name@example.com"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full border-b border-gray-300 dark:border-gray-700 py-2 focus:outline-none focus:border-black dark:focus:border-white transition-colors bg-transparent placeholder-gray-300 dark:placeholder-gray-600 text-lg font-serif text-black dark:text-white"
+                                required
+                                minLength={8}
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-black dark:bg-white text-white dark:text-black rounded-full py-3 mt-8 font-bold text-sm hover:bg-gray-800 dark:hover:bg-gray-200 transition-all disabled:opacity-50 flex justify-center items-center gap-2"
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={18} /> : (isLogin ? 'Sign In' : 'Create Account')}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 text-center">
+                        <button
+                            onClick={() => {
+                                setIsLogin(!isLogin);
+                                setError('');
+                            }}
+                            className="text-green-700 dark:text-green-500 hover:text-green-800 text-sm font-bold flex items-center justify-center gap-1 mx-auto"
+                        >
+                            {isLogin ? "No account? Create one" : "Already have an account? Sign in"} <ArrowRight size={14}/>
+                        </button>
                     </div>
-                </div>
-            </div>
-            <div className="hidden lg:block relative w-0 flex-1 bg-brand-dark">
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-primary to-purple-900 opacity-90"></div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-12 text-center">
-                    <h2 className="text-4xl font-display font-bold mb-6">Unleash your creativity.</h2>
-                    <p className="text-lg text-purple-100 max-w-lg">Pedium is a platform for writers, thinkers, and storytellers. Share your ideas with the world.</p>
                 </div>
             </div>
         </div>

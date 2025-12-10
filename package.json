@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-pedium",
+  "name": "pedium",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,29 +9,30 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "react-router-dom": "6.21.0",
-    "appwrite": "16.0.2",
-    "@google/genai": "^1.32.0",
-    "lucide-react": "0.294.0",
-    "date-fns": "3.0.0",
-    "@editorjs/editorjs": "2.28.2",
-    "@editorjs/header": "2.8.1",
-    "@editorjs/list": "1.9.0",
-    "@editorjs/image": "2.9.0",
-    "@editorjs/quote": "2.6.0",
-    "@editorjs/embed": "2.7.0",
-    "@editorjs/delimiter": "1.4.0",
-    "@editorjs/checklist": "1.6.0",
-    "@editorjs/marker": "1.4.0",
-    "@editorjs/inline-code": "1.5.0",
-    "@editorjs/code": "2.9.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0",
+    "appwrite": "^14.0.0",
+    "@google/genai": "^0.1.1",
+    "lucide-react": "^0.294.0",
+    "date-fns": "^3.0.0",
+    "@editorjs/editorjs": "^2.28.2",
+    "@editorjs/header": "^2.8.1",
+    "@editorjs/list": "^1.9.0",
+    "@editorjs/image": "^2.9.0",
+    "@editorjs/quote": "^2.6.0",
+    "@editorjs/embed": "^2.7.0",
+    "@editorjs/delimiter": "^1.4.0",
+    "@editorjs/checklist": "^1.6.0",
+    "@editorjs/marker": "^1.4.0",
+    "@editorjs/inline-code": "^1.5.0",
+    "@editorjs/code": "^2.9.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
   }
 }
