@@ -106,7 +106,7 @@ const Write: React.FC = () => {
                 const url = await uploadFile(file);
                 setCoverImage(url);
             } else {
-                alert("Could not generate image. Please try again.");
+                alert("Could not generate image. Please try again or check API limits.");
             }
         } catch (e) {
             console.error("AI Generation failed", e);
@@ -154,12 +154,13 @@ const Write: React.FC = () => {
                                         stretched: false
                                     }
                                 });
-                                continue;
                             }
                         } catch (e) {
                             console.error("Failed inline image", e);
-                            continue;
                         }
+                        // IMPORTANT: Always continue here to prevent pushing the raw 'image_suggestion' block
+                        // which Editor.js doesn't know how to render.
+                        continue;
                     }
                     
                     processedBlocks.push(block);

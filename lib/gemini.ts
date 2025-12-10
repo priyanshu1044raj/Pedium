@@ -1,6 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.API_KEY;
+if (!apiKey) {
+    console.warn("Gemini API Key is missing! Check your environment variables (e.g. Vercel env settings).");
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 // Helper: Generate Image from Prompt using gemini-2.5-flash-image
 export const generateImageFromPrompt = async (prompt: string, aspectRatio: string = "1:1"): Promise<string | null> => {
@@ -15,7 +20,12 @@ export const generateImageFromPrompt = async (prompt: string, aspectRatio: strin
             }
         });
 
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (!response.candidates || response.candidates.length === 0) {
+            console.warn("Gemini Image Gen: No candidates returned. This often means the prompt triggered safety filters or the model is overloaded.", response);
+            return null;
+        }
+
+        for (const part of response.candidates[0].content?.parts || []) {
             if (part.inlineData) {
                 const base64Data = part.inlineData.data;
                 const mimeType = part.inlineData.mimeType || 'image/png';
