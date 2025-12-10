@@ -5,7 +5,7 @@ import { databases, DB_ID, CollectionIDs, Query, ID, getProfile } from '../lib/a
 import { Article as ArticleType, Comment, UserProfile } from '../types';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
-import { Heart, MessageCircle, Share2, BookmarkPlus, PlayCircle, StopCircle, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Share2, BookmarkPlus, PlayCircle, StopCircle, Eye, Check, AlertTriangle } from 'lucide-react';
 import { toggleFollow, checkIsFollowing } from '../lib/appwrite';
 
 const BlockRenderer: React.FC<{ block: any }> = ({ block }) => {
@@ -36,12 +36,53 @@ const BlockRenderer: React.FC<{ block: any }> = ({ block }) => {
                     ))}
                 </ul>
             );
+        case 'checklist':
+            return (
+                <div className="my-8 space-y-3 font-serif text-[20px] text-[#292929] dark:text-[#d1d1d1]">
+                    {block.data.items.map((item: any, i: number) => (
+                        <div key={i} className="flex items-start gap-3">
+                            <div className={`mt-1.5 w-5 h-5 border-2 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${item.checked ? 'bg-green-600 border-green-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                                {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
+                            </div>
+                            <span className={item.checked ? 'line-through text-gray-400' : ''} dangerouslySetInnerHTML={{ __html: item.text }} />
+                        </div>
+                    ))}
+                </div>
+            );
         case 'quote':
             return (
                 <blockquote className="border-l-[4px] border-black dark:border-gray-500 pl-6 my-12 italic font-serif text-[24px] md:text-[26px] text-[#242424] dark:text-[#e0e0e0] leading-tight">
                     "{block.data.text}"
                     {block.data.caption && <cite className="block text-base not-italic mt-4 text-gray-500 dark:text-gray-400 font-sans">— {block.data.caption}</cite>}
                 </blockquote>
+            );
+        case 'warning':
+            return (
+                <div className="my-10 p-6 bg-yellow-50 dark:bg-yellow-900/10 border-l-4 border-yellow-500 rounded-r-lg">
+                    <div className="font-bold text-yellow-800 dark:text-yellow-500 mb-2 font-sans flex items-center gap-2 text-lg">
+                        <AlertTriangle size={20} /> {block.data.title || "Note"}
+                    </div>
+                    <div className="text-yellow-800 dark:text-yellow-200 font-serif text-lg" dangerouslySetInnerHTML={{ __html: block.data.message }} />
+                </div>
+            );
+        case 'table':
+            return (
+                <div className="my-12 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                    <table className="w-full text-left border-collapse font-serif text-lg min-w-[600px]">
+                        <tbody>
+                            {block.data.content.map((row: string[], i: number) => (
+                                <tr key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                    {row.map((cell, j) => {
+                                        const Tag = (block.data.withHeadings && i === 0) ? 'th' : 'td';
+                                        return (
+                                            <Tag key={j} className={`p-4 align-top ${Tag === 'th' ? 'font-sans font-bold bg-gray-50 dark:bg-gray-900 text-sm uppercase tracking-wide text-gray-500' : 'text-[#292929] dark:text-[#d1d1d1]'}`} dangerouslySetInnerHTML={{ __html: cell }} />
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             );
         case 'delimiter':
             return <div className="flex justify-center text-3xl my-16 tracking-[0.5em] text-gray-300 dark:text-gray-600">...</div>;
@@ -50,6 +91,23 @@ const BlockRenderer: React.FC<{ block: any }> = ({ block }) => {
                  <pre className="bg-[#f9f9f9] dark:bg-[#1e1e1e] p-6 rounded-lg my-10 overflow-x-auto font-mono text-sm text-black dark:text-gray-200 border border-gray-100 dark:border-gray-800">
                      <code>{block.data.code}</code>
                  </pre>
+             );
+        case 'raw':
+             return <div className="my-10" dangerouslySetInnerHTML={{ __html: block.data.html }} />;
+        case 'embed':
+             return (
+                <div className="my-12">
+                    <div className="w-full relative pt-[56.25%] bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm">
+                         <iframe 
+                            src={block.data.embed} 
+                            className="absolute inset-0 w-full h-full"
+                            frameBorder="0"
+                            allow="autoplay; encrypted-media; picture-in-picture"
+                            allowFullScreen
+                         ></iframe>
+                    </div>
+                    {block.data.caption && <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4 font-sans">{block.data.caption}</div>}
+                </div>
              );
         default:
             return null;
