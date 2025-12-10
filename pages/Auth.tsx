@@ -50,6 +50,19 @@ const Auth: React.FC = () => {
                     followersCount: 0
                 });
 
+                // Create Welcome Notification
+                try {
+                    await databases.createDocument(DB_ID, CollectionIDs.NOTIFICATIONS, ID.unique(), {
+                        userId: userId,
+                        type: 'welcome',
+                        message: 'Welcome to Pedium! Your account has been successfully created.',
+                        link: `/profile/${userId}`,
+                        isRead: false
+                    });
+                } catch (err) {
+                    console.error("Failed to create welcome notification", err);
+                }
+
                 await refreshProfile();
                 navigate('/');
             }

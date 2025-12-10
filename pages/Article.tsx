@@ -130,6 +130,7 @@ const Article: React.FC = () => {
     
     // UI State
     const [heroVisible, setHeroVisible] = useState(true);
+    const [copied, setCopied] = useState(false);
 
     const fetchArticle = async () => {
         if (!id) return;
@@ -272,6 +273,30 @@ const Article: React.FC = () => {
         } catch (e) {}
     };
 
+    const handleShare = async () => {
+        if (!article) return;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: article.title,
+                    text: article.summary || article.excerpt,
+                    url: window.location.href,
+                });
+            } catch (err) {
+                console.error('Error sharing:', err);
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        }
+    };
+
     const toggleSpeech = () => {
         if (isSpeaking) {
             window.speechSynthesis.cancel();
@@ -397,7 +422,18 @@ const Article: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-6 text-[#757575] dark:text-[#999]">
-                         <Share2 size={22} className="hover:text-black dark:hover:text-white cursor-pointer" strokeWidth={1.5} />
+                         <button 
+                            onClick={handleShare}
+                            className="hover:text-black dark:hover:text-white cursor-pointer relative"
+                            title="Share"
+                         >
+                             {copied ? <Check size={22} className="text-green-600" /> : <Share2 size={22} strokeWidth={1.5} />}
+                             {copied && (
+                                 <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black text-white text-xs py-1 px-3 rounded-lg shadow-lg whitespace-nowrap animate-in fade-in slide-in-from-bottom-1">
+                                     Copied!
+                                 </span>
+                             )}
+                         </button>
                          <BookmarkPlus size={22} className="hover:text-black dark:hover:text-white cursor-pointer" strokeWidth={1.5} />
                     </div>
                 </div>
