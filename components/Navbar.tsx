@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { searchArticles } from '../lib/appwrite';
 import { 
-    PenTool, Bell, Search, Menu, X, User, LogOut, FileText, Sun, Moon
+    PenTool, Bell, Search, Menu, X, User, LogOut, Sun, Moon
 } from 'lucide-react';
 import { Article } from '../types';
 
@@ -42,7 +42,7 @@ const Navbar: React.FC = () => {
 
     useEffect(() => {
         const delaySearch = setTimeout(async () => {
-            if (searchTerm.length >= 3) {
+            if (searchTerm.length >= 2) {
                 const results = await searchArticles(searchTerm);
                 setSearchResults(results as unknown as Article[]);
                 setShowResults(true);
@@ -90,7 +90,7 @@ const Navbar: React.FC = () => {
                         </Link>
                         
                         {/* Search (Desktop) */}
-                        <div className="hidden md:block relative" ref={searchRef}>
+                        <div className="hidden md:block relative z-50" ref={searchRef}>
                             <div className="flex items-center bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 w-64 focus-within:bg-white dark:focus-within:bg-[#1a1a1a] focus-within:border-black dark:focus-within:border-gray-500 focus-within:w-80 transition-all duration-300">
                                 <Search 
                                     size={18} 
@@ -124,7 +124,7 @@ const Navbar: React.FC = () => {
                                                 className="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                                 onClick={() => { setShowResults(false); setSearchTerm(''); }}
                                             >
-                                                <div className="text-sm font-bold text-gray-900 dark:text-gray-200 line-clamp-1 uppercase">{art.title}</div>
+                                                <div className="text-sm font-bold text-gray-900 dark:text-gray-200 line-clamp-1">{art.title}</div>
                                                 <div className="text-xs text-gray-500 line-clamp-1 mt-0.5">{art.authorName}</div>
                                             </Link>
                                         ))

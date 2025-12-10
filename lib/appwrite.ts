@@ -96,14 +96,23 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
 export const searchArticles = async (term: string) => {
     if (!term || term.length < 2) return [];
     try {
+        // Robust search implementation: Fetch latest articles and filter client-side.
+        // This mirrors the logic in Home.tsx and works without explicit FullText indexes being ready.
         const response = await databases.listDocuments(
             DB_ID,
             CollectionIDs.ARTICLES,
-            [Query.search('title', term), Query.limit(5)]
+            [Query.orderDesc('$createdAt'), Query.limit(100)]
         );
-        return response.documents;
+        
+        const lowerTerm = term.toLowerCase();
+        const results = response.documents.filter((doc: any) => 
+            doc.title.toLowerCase().includes(lowerTerm) || 
+            (doc.tags && doc.tags.some((tag: string) => tag.toLowerCase().includes(lowerTerm)))
+        );
+
+        return results.slice(0, 5);
     } catch (e) {
-        console.error("Search error (Ensure 'title' FullText index exists):", e);
+        console.error("Search error:", e);
         return [];
     }
 };

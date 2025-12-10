@@ -2,10 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const generateAvatar = async (username: string): Promise<string | null> => {
+// Helper: Generate Image from Prompt using gemini-2.5-flash-image
+export const generateImageFromPrompt = async (prompt: string): Promise<string | null> => {
     try {
-        const prompt = `Create a cute, vibrant, 2D flat vector art avatar for a user named "${username}". The character should be friendly, colorful, and styled like a modern cartoon or illustration. Use soft pastel colors for the background. Ensure the image is circular-ready and centered.`;
-        
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
@@ -22,53 +21,30 @@ export const generateAvatar = async (username: string): Promise<string | null> =
         }
         return null;
     } catch (error) {
-        console.error("Gemini Avatar Generation Failed:", error);
+        console.error("Gemini Image Generation Failed:", error);
         return null;
     }
 };
 
+export const generateAvatar = async (username: string): Promise<string | null> => {
+    // Simplified prompt for reliable avatar generation
+    const prompt = `cute colorful flat vector avatar icon for user ${username}, minimal style, white background, circular`;
+    return await generateImageFromPrompt(prompt);
+};
+
 export const generateCoverImage = async (title: string, tags: string[] = [], context: string = ''): Promise<string | null> => {
-    try {
-        const tagString = tags.length > 0 ? `Tags: ${tags.join(', ')}.` : '';
-        const contextString = context ? `Article Context: ${context.substring(0, 300)}...` : '';
-        
-        // Updated prompt for Semantic, Editorial-style images
-        const prompt = `Create a high-quality, professional editorial illustration for a blog post titled "${title}". 
-        ${tagString}
-        ${contextString}
-        
-        Instructions:
-        1. Analyze the title and context to understand the subject matter.
-        2. Create a visual metaphor or scene that clearly represents this subject.
-        3. Style: Modern digital illustration, clean lines, professional color palette (avoid excessive neon/fluorescent colors unless appropriate for the topic).
-        4. No text inside the image.
-        5. Aspect Ratio: 16:9 (Landscape).`;
+    const tagString = tags.length > 0 ? `Tags: ${tags.join(', ')}.` : '';
+    const contextString = context ? `Context: ${context.substring(0, 200)}...` : '';
+    
+    // Prompt for high-quality blog cover
+    const prompt = `high quality editorial illustration for blog post titled "${title}". ${tagString} ${contextString} modern, minimal, flat design, artistic, 16:9 aspect ratio, no text`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: {
-                parts: [{ text: prompt }]
-            },
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-            if (part.inlineData) {
-                const base64Data = part.inlineData.data;
-                const mimeType = part.inlineData.mimeType || 'image/png';
-                return `data:${mimeType};base64,${base64Data}`;
-            }
-        }
-        return null;
-
-    } catch (error) {
-        console.error("Gemini Cover Generation Failed:", error);
-        return null;
-    }
+    return await generateImageFromPrompt(prompt);
 };
 
 export const generateSummary = async (title: string, content: string): Promise<string> => {
     try {
-        const prompt = `Read the following article title and content. Generate a short, intriguing, and catchy 2-sentence summary (approx 30 words) that makes a user want to click. Title: ${title}. Content: ${content.substring(0, 1000)}...`;
+        const prompt = `Summarize this article in 1 short sentence (max 30 words). Title: ${title}. Content: ${content.substring(0, 1000)}`;
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -84,21 +60,20 @@ export const generateSummary = async (title: string, content: string): Promise<s
 
 export const generateArticleContent = async (topic: string): Promise<any> => {
     try {
-        const prompt = `Write a comprehensive, engaging blog post about "${topic}". 
-        Return the response strictly as a JSON object compatible with Editor.js "blocks" array format. 
+        const prompt = `Write a comprehensive blog post about "${topic}".
+        Return strict JSON for Editor.js blocks.
         
-        The JSON should look like this structure:
+        Rules:
+        1. NO Markdown formatting (no **bold**, no *italic*, no # headers) in text fields. Pure text only.
+        2. Include 6-10 blocks.
+        3. Use a mix of: 'header' (level 2), 'paragraph', 'list', 'quote', 'warning', 'delimiter', 'code'.
+        4. Include 1 or 2 'image_suggestion' blocks where an image would enhance the article.
+           Format for image suggestion: { "type": "image_suggestion", "data": { "prompt": "Detailed visual description of image needed", "caption": "Image caption" } }
+        
+        Structure:
         {
-            "blocks": [
-                { "type": "header", "data": { "text": "Catchy Subheading", "level": 2 } },
-                { "type": "paragraph", "data": { "text": "Engaging introduction text..." } },
-                { "type": "list", "data": { "style": "unordered", "items": ["point 1", "point 2"] } },
-                { "type": "header", "data": { "text": "Another Section", "level": 2 } },
-                { "type": "paragraph", "data": { "text": "Detailed explanation..." } }
-            ]
-        }
-        
-        Include at least 5-7 blocks. Do not include markdown formatting like \`\`\`json. Just return the JSON object.`;
+            "blocks": [ ... ]
+        }`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -116,35 +91,15 @@ export const generateArticleContent = async (topic: string): Promise<any> => {
 
 export const generateTags = async (title: string, content: string): Promise<string[]> => {
     try {
-        // Enforce specific categories
-        const predefinedCategories = ["Programming", "AI", "Design", "Psychology", "Money", "Business"];
-        
-        const prompt = `Analyze the following article title and content.
-        
-        Task 1: Assign exactly ONE primary category from this list: [${predefinedCategories.join(', ')}].
-        Task 2: Generate 2-3 additional relevant, specific tags (lowercase).
-        
-        Return ONLY the tags separated by commas, starting with the primary category.
-        
-        Title: ${title}
-        Content Snippet: ${content.substring(0, 500)}...`;
-        
+        const prompt = `Generate 3-5 comma-separated tags for article "${title}". First tag must be one of: Programming, AI, Design, Psychology, Money, Business.`;
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
 
         const text = response.text || "";
-        // Clean up text and split
-        const tags = text.split(',')
-            .map(t => t.trim().replace(/[^a-zA-Z0-9 ]/g, '')) // Remove special chars but keep spaces/case for readability logic if needed, though usually we lowercase. 
-            // However, the prompt asks for specific Capitalized categories. Let's keep the first one capitalized if it matches, others lowercase.
-            .filter(t => t.length > 0 && t.length < 20)
-            .slice(0, 5);
-            
-        return tags;
+        return text.split(',').map(t => t.trim()).slice(0, 5);
     } catch (error) {
-        console.error("Tag generation failed", error);
         return [];
     }
 };

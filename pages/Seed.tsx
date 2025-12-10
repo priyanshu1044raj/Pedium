@@ -14,59 +14,53 @@ const Seed: React.FC = () => {
 
     const articlesToGenerate = [
         {
-            title: "The Future of Web Development: Beyond React",
-            tags: ["coding", "technology"],
+            title: "The Ultimate Guide to React Performance in 2024",
+            tags: ["coding", "react"],
             blocks: [
-                { type: "header", data: { text: "The Paradigm Shift", level: 2 } },
-                { type: "paragraph", data: { text: "As we move into 2024, the landscape of web development is shifting beneath our feet. While React remains dominant, new contenders like SolidJS and Svelte are challenging the virtual DOM model." } },
-                { type: "quote", data: { text: "Simplicity is the ultimate sophistication.", caption: "Leonardo da Vinci" } },
-                { type: "paragraph", data: { text: "Consider the following component structure in a signal-based framework:" } },
-                { type: "code", data: { code: "const Count = () => {\n  const [count, setCount] = createSignal(0);\n  return <button onClick={() => setCount(c => c + 1)}>{count()}</button>;\n}" } },
-                { type: "paragraph", data: { text: "This granular reactivity model offers significant performance benefits over the traditional top-down reconciliation process." } }
+                { type: "paragraph", data: { text: "Performance is no longer optional. In 2024, web vitals directly impact your search ranking and user retention. Let's dive deep into optimizing React applications." } },
+                { type: "header", data: { text: "1. Understanding Re-renders", level: 2 } },
+                { type: "warning", data: { title: "Pro Tip", message: "Use the React DevTools Profiler to visualize component updates." } },
+                { type: "paragraph", data: { text: "The most common performance killer is unnecessary re-renders. Here is a pattern to avoid:" } },
+                { type: "code", data: { code: "// Bad Practice\nconst Component = () => {\n  const [data, setData] = useState({});\n  const handleClick = () => { /* ... */ };\n  // handleClick is redefined on every render!\n  return <Child onClick={handleClick} />;\n}" } },
+                { type: "paragraph", data: { text: "Instead, wrap stable functions in `useCallback`." } },
+                { type: "table", data: { withHeadings: true, content: [["Metric", "Target", "Impact"], ["LCP", "< 2.5s", "High"], ["FID", "< 100ms", "High"], ["CLS", "< 0.1", "Medium"]] } },
+                { type: "image", data: { file: { url: "https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=1600&q=80" }, caption: "Code optimization is an art." } }
             ]
         },
         {
-            title: "Mastering Python for Data Science",
-            tags: ["coding", "python", "data"],
+            title: "Why Minimalist Design is Taking Over Tech",
+            tags: ["design", "ui"],
             blocks: [
-                { type: "header", data: { text: "Why Python Wins", level: 2 } },
-                { type: "paragraph", data: { text: "Python's ecosystem for data analysis is unmatched. Libraries like Pandas, NumPy, and Scikit-learn provide a robust foundation for any data scientist." } },
-                { type: "list", data: { style: "unordered", items: ["Easy to learn syntax", "Massive community support", "Integration with Big Data tools"] } },
-                { type: "paragraph", data: { text: "Here is a simple example of data manipulation using Pandas:" } },
-                { type: "code", data: { code: "import pandas as pd\n\ndf = pd.read_csv('data.csv')\nprint(df.describe())" } },
+                { type: "header", data: { text: "Less is More", level: 2 } },
+                { type: "quote", data: { text: "Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.", caption: "Antoine de Saint-Exupéry" } },
+                { type: "paragraph", data: { text: "We are seeing a shift away from complex, skeuomorphic interfaces towards clean, flat, and typography-driven designs." } },
+                { type: "list", data: { style: "unordered", items: ["Focus on content", "Faster load times", "Better accessibility"] } },
+                { type: "image", data: { file: { url: "https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=1600&q=80" }, caption: "Clean lines define modern aesthetics." } },
+                { type: "paragraph", data: { text: "Apple's recent iOS updates confirm this trend, utilizing large headers and negative space effectively." } }
+            ]
+        },
+        {
+            title: "Top 5 Investment Strategies for the Next Decade",
+            tags: ["money", "business"],
+            blocks: [
+                { type: "paragraph", data: { text: "The global economy is changing. Traditional 60/40 portfolios are being challenged by new asset classes." } },
+                { type: "checklist", data: { items: [ { text: "Diversify into emerging markets", checked: true }, { text: "Consider Green Energy ETFs", checked: true }, { text: "Ignore cryptocurrency volatility", checked: false } ] } },
+                { type: "header", data: { text: "The Rise of AI Investing", level: 2 } },
+                { type: "paragraph", data: { text: "Algorithmic trading is now accessible to retail investors. However, caution is advised." } },
+                { type: "warning", data: { title: "Risk Alert", message: "Past performance does not guarantee future results. Always consult a financial advisor." } },
+                { type: "image", data: { file: { url: "https://images.unsplash.com/photo-1611974765270-ca1258822981?auto=format&fit=crop&w=1600&q=80" }, caption: "Market trends analysis." } }
+            ]
+        },
+        {
+            title: "The Neurochemistry of Focus",
+            tags: ["psychology", "health"],
+            blocks: [
+                { type: "header", data: { text: "Dopamine and Distraction", level: 2 } },
+                { type: "paragraph", data: { text: "Our brains are hardwired to seek novelty. Social media exploits this vulnerability, creating a feedback loop that destroys attention spans." } },
                 { type: "delimiter", data: {} },
-                { type: "paragraph", data: { text: "Start your journey today by installing Anaconda or setting up a Jupyter Notebook environment." } }
-            ]
-        },
-        {
-            title: "Global Summit: Tech Giants Announce AI Coalition",
-            tags: ["news", "ai"],
-            blocks: [
-                { type: "header", data: { text: "A Unified Front for AI Safety", level: 2 } },
-                { type: "paragraph", data: { text: "In a historic move, leaders from top technology firms gathered in Geneva today to announce the formation of the Global AI Safety Coalition. The goal is to establish universal standards for ethical AI development." } },
-                { type: "quote", data: { text: "This is not just about regulation; it's about the survival of human creativity.", caption: "Summit Keynote Speaker" } },
-                { type: "paragraph", data: { text: "The agreement covers three main pillars: Transparency, Accountability, and Bias Mitigation. Critics argue that self-regulation may not be enough, but the market reacted positively with tech stocks rising 3%." } }
-            ]
-        },
-        {
-            title: "SpaceX Starship: The Road to Mars",
-            tags: ["news", "space"],
-            blocks: [
-                { type: "paragraph", data: { text: "The latest iteration of Starship has successfully completed its static fire test, paving the way for the next orbital flight attempt. Elon Musk states that reliability is the primary focus for this launch window." } },
-                { type: "header", data: { text: "Engineering Marvels", level: 2 } },
-                { type: "paragraph", data: { text: "The Raptor engines used in the Super Heavy booster are the most efficient methalox engines ever produced. The sheer thrust generated at liftoff is double that of the Saturn V rocket." } },
-                { type: "list", data: { style: "ordered", items: ["33 Raptor Engines", "Stainless Steel Construction", "Full Reusability"] } },
-                { type: "paragraph", data: { text: "Humanity is one step closer to becoming a multi-planetary species." } }
-            ]
-        },
-        {
-            title: "Welcome to Pedium: The Art of Storytelling",
-            tags: ["pedium", "writing"],
-            blocks: [
-                { type: "header", data: { text: "Share Your Voice", level: 1 } },
-                { type: "paragraph", data: { text: "Pedium is more than just a blogging platform; it's a canvas for your thoughts. With our sleek, distraction-free editor, you can focus on what matters most: your words." } },
-                { type: "checklist", data: { items: [ { text: "Create an account", checked: true }, { text: "Customize your profile", checked: true }, { text: "Write your first masterpiece", checked: false } ] } },
-                { type: "paragraph", data: { text: "We believe in the power of community. Engage with other writers, follow your favorites, and build your audience. Welcome home." } }
+                { type: "paragraph", data: { text: "To combat this, we must practice 'Deep Work'. This involves scheduling blocks of uninterrupted time." } },
+                { type: "image", data: { file: { url: "https://images.unsplash.com/photo-1517971071642-34a2d3ecc6c3?auto=format&fit=crop&w=1600&q=80" }, caption: "A quiet space is essential for deep focus." } },
+                { type: "quote", data: { text: "The ability to perform deep work is becoming increasingly rare at exactly the same time it is becoming increasingly valuable.", caption: "Cal Newport" } }
             ]
         }
     ];
@@ -83,7 +77,7 @@ const Seed: React.FC = () => {
             for (const article of articlesToGenerate) {
                 log(`Generating cover for: ${article.title}...`);
                 
-                // 1. Generate Cover
+                // 1. Generate Cover using AI
                 let coverUrl = null;
                 try {
                     const b64 = await generateCoverImage(article.title, article.tags);
@@ -108,14 +102,14 @@ const Seed: React.FC = () => {
                     ID.unique(),
                     {
                         title: article.title,
-                        content: JSON.stringify({ time: Date.now(), blocks: article.blocks, version: "2.28.2" }),
+                        content: JSON.stringify({ time: Date.now(), blocks: article.blocks, version: "2.29.1" }),
                         coverImage: coverUrl,
                         authorId: user.$id,
                         authorName: profile.name,
                         authorAvatar: profile.avatarUrl,
                         excerpt: plainText.substring(0, 150) + "...",
                         summary: summary,
-                        views: Math.floor(Math.random() * 500) + 50, // Random views for trending
+                        views: Math.floor(Math.random() * 500) + 50, 
                         likesCount: Math.floor(Math.random() * 50),
                         tags: article.tags
                     }
@@ -138,15 +132,15 @@ const Seed: React.FC = () => {
                 <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
                     <h1 className="text-3xl font-display font-bold mb-6">Seed Content Generator</h1>
                     <p className="text-gray-600 mb-8">
-                        This tool will automatically generate and publish 5 high-quality articles (Coding, News, Pedium) to your database using your current user profile as the author. It includes generating vibrant AI cover images and summaries.
+                        This tool will automatically generate and publish 4 rich, high-quality articles with Tables, Code, Quotes, and Images to your database using your current user profile.
                     </p>
                     
                     <button 
                         onClick={generate} 
                         disabled={isSeeding}
-                        className="w-full bg-brand-primary text-white py-4 rounded-xl font-bold hover:bg-brand-secondary disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-primary/20"
+                        className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg"
                     >
-                        {isSeeding ? <><Loader2 className="animate-spin" /> Generating Content...</> : "Generate 5 Articles"}
+                        {isSeeding ? <><Loader2 className="animate-spin" /> Generating Content...</> : "Generate 4 Rich Articles"}
                     </button>
 
                     <div className="mt-8 space-y-3">

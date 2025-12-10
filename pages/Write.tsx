@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import EditorComponent from '../components/EditorComponent';
 import { uploadFile, databases, ID, DB_ID, CollectionIDs } from '../lib/appwrite';
-import { generateCoverImage, generateSummary, generateArticleContent, generateTags } from '../lib/gemini';
+import { generateCoverImage, generateSummary, generateArticleContent, generateTags, generateImageFromPrompt } from '../lib/gemini';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { OutputData } from '@editorjs/editorjs';
@@ -27,6 +27,7 @@ const Write: React.FC = () => {
     const [showAiModal, setShowAiModal] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
     const [isAiWriting, setIsAiWriting] = useState(false);
+    const [aiStatus, setAiStatus] = useState('Writing...');
     const [editorKey, setEditorKey] = useState(0);
 
     const [draftStatus, setDraftStatus] = useState<'Saved' | 'Saving...' | ''>('');
@@ -120,9 +121,55 @@ const Write: React.FC = () => {
     const handleAiWriteArticle = async () => {
         if(!aiPrompt.trim()) return;
         setIsAiWriting(true);
+        setAiStatus('Drafting content...');
+        
         try {
             const generatedContent = await generateArticleContent(aiPrompt);
+            
             if(generatedContent && generatedContent.blocks) {
+                const processedBlocks = [];
+                let imageCount = 0;
+
+                for (const block of generatedContent.blocks) {
+                    // 1. Clean Markdown stars
+                    if (block.data && typeof block.data.text === 'string') {
+                        block.data.text = block.data.text.replace(/\*\*/g, '').replace(/__/g, '');
+                    }
+
+                    // 2. Handle Image Suggestions
+                    if (block.type === 'image_suggestion') {
+                        imageCount++;
+                        setAiStatus(`Generating image ${imageCount}...`);
+                        try {
+                            const b64 = await generateImageFromPrompt(block.data.prompt);
+                            if (b64) {
+                                const res = await fetch(b64);
+                                const blob = await res.blob();
+                                const file = new File([blob], 'ai_content_image.png', { type: 'image/png' });
+                                const url = await uploadFile(file);
+                                
+                                processedBlocks.push({
+                                    type: 'image',
+                                    data: {
+                                        file: { url },
+                                        caption: block.data.caption || '',
+                                        withBorder: false,
+                                        withBackground: false,
+                                        stretched: false
+                                    }
+                                });
+                                continue;
+                            }
+                        } catch (e) {
+                            console.error("Failed inline image", e);
+                            continue;
+                        }
+                    }
+                    
+                    processedBlocks.push(block);
+                }
+
+                generatedContent.blocks = processedBlocks;
                 setEditorData(generatedContent);
                 setEditorKey(prev => prev + 1); 
                 if(!title) setTitle(aiPrompt);
@@ -135,6 +182,7 @@ const Write: React.FC = () => {
             alert("Error writing article.");
         } finally {
             setIsAiWriting(false);
+            setAiStatus('Writing...');
         }
     }
 
@@ -303,10 +351,11 @@ const Write: React.FC = () => {
                             </label>
                             <button 
                                 onClick={handleAiGenerateCover}
-                                disabled={!title}
+                                disabled={!title || isGeneratingCover}
                                 className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 hover:text-black dark:hover:text-white transition-colors disabled:opacity-50"
                             >
-                                <Sparkles size={18} /> Generate Cover
+                                {isGeneratingCover ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                                {isGeneratingCover ? "Generating..." : "Generate Cover"}
                             </button>
                         </div>
                     )}
@@ -367,7 +416,7 @@ const Write: React.FC = () => {
                             className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                             {isAiWriting ? <Loader2 className="animate-spin" size={18}/> : <Sparkles size={18}/>}
-                            Generate Draft
+                            {isAiWriting ? aiStatus : "Generate Draft"}
                         </button>
                     </div>
                 </div>

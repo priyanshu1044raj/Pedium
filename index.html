@@ -70,6 +70,21 @@
         }
       }
     </script>
+    <script>
+      // Polyfill/Shim for navigator.keyboard.getLayoutMap
+      // This fixes the "getLayoutMap() must be called from a top-level browsing context" error
+      // that occurs when running Editor.js or Monaco in an iframe without specific permissions.
+      if (navigator.keyboard) {
+        const originalGetLayoutMap = navigator.keyboard.getLayoutMap;
+        navigator.keyboard.getLayoutMap = function() {
+          return originalGetLayoutMap.call(navigator.keyboard)
+            .catch((e) => {
+              console.warn('navigator.keyboard.getLayoutMap() failed, returning fallback map.');
+              return new Map();
+            });
+        };
+      }
+    </script>
     <style>
       body {
         margin: 0;
