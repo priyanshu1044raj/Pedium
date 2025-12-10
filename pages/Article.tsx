@@ -181,6 +181,47 @@ const Article: React.FC = () => {
 
     useEffect(() => { fetchArticle(); }, [id, user]);
 
+    // SEO & Sharing - Dynamic Meta Tag Update
+    useEffect(() => {
+        if (!article) return;
+
+        // 1. Update Title
+        document.title = `${article.title} - Pedium`;
+
+        // 2. Helper to update/create meta tags
+        const updateMeta = (selector: string, content: string) => {
+            let element = document.querySelector(selector);
+            if (!element) {
+                element = document.createElement('meta');
+                if (selector.startsWith('meta[property=')) {
+                    element.setAttribute('property', selector.replace("meta[property='", "").replace("']", ""));
+                } else if (selector.startsWith('meta[name=')) {
+                    element.setAttribute('name', selector.replace("meta[name='", "").replace("']", ""));
+                }
+                document.head.appendChild(element);
+            }
+            element.setAttribute('content', content);
+        };
+
+        const desc = article.summary || article.excerpt || "Read this article on Pedium.";
+        const img = article.coverImage || "https://ui-avatars.com/api/?name=Pedium&background=242424&color=fff&size=512";
+
+        updateMeta("meta[name='description']", desc);
+        updateMeta("meta[property='og:title']", article.title);
+        updateMeta("meta[property='og:description']", desc);
+        updateMeta("meta[property='og:image']", img);
+        updateMeta("meta[property='twitter:title']", article.title);
+        updateMeta("meta[property='twitter:description']", desc);
+        updateMeta("meta[property='twitter:image']", img);
+
+        return () => {
+             // Optional: Cleanup or reset to default tags when leaving article
+             document.title = "Pedium – Where good ideas find you.";
+        };
+
+    }, [article]);
+
+
     useEffect(() => {
         const handleScroll = () => {
             const scrollY = window.scrollY;
