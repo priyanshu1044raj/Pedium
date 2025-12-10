@@ -33,12 +33,23 @@ export interface Comment {
   $createdAt: string;
 }
 
+export interface Notification {
+    $id: string;
+    userId: string;
+    type: 'new_article' | 'follow';
+    message: string;
+    link: string;
+    isRead: boolean;
+    $createdAt: string;
+}
+
 export enum CollectionIDs {
   PROFILES = 'profiles',
   ARTICLES = 'articles',
   COMMENTS = 'comments',
   LIKES = 'likes',
-  FOLLOWS = 'follows'
+  FOLLOWS = 'follows',
+  NOTIFICATIONS = 'notifications'
 }
 
 export enum BucketIDs {

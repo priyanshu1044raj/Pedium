@@ -15,6 +15,24 @@ export const storage = new Storage(client);
 
 export { ID, Query, CollectionIDs, BucketIDs };
 
+export const base64ToFile = (dataUrl: string, filename: string): File => {
+    try {
+        if (!dataUrl || !dataUrl.includes(',')) return new File([], filename);
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, {type:mime});
+    } catch (e) {
+        console.error("Error converting base64 to file", e);
+        return new File([], filename);
+    }
+};
+
 export const uploadFile = async (file: File): Promise<string> => {
     try {
         const result = await storage.createFile(
@@ -23,6 +41,7 @@ export const uploadFile = async (file: File): Promise<string> => {
             file
         );
         const url = storage.getFileView(BucketIDs.IMAGES, result.$id);
+        // Return the url directly as it is typed as string
         return url; 
     } catch (error) {
         console.error("Upload failed", error);
@@ -57,6 +76,17 @@ export const checkIsFollowing = async (followerId: string, followingId: string) 
     }
 };
 
+export const getFollowers = async (userId: string) => {
+    try {
+        const res = await databases.listDocuments(DB_ID, CollectionIDs.FOLLOWS, [
+            Query.equal('following_id', userId)
+        ]);
+        return res.documents;
+    } catch (e) {
+        return [];
+    }
+};
+
 export const toggleFollow = async (followerId: string, followingId: string) => {
     try {
         const existing = await checkIsFollowing(followerId, followingId);
@@ -85,6 +115,21 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
                      followersCount: (followingProfile.followersCount || 0) + 1
                  });
             }
+            
+            // Create Notification for the person being followed
+            try {
+                await databases.createDocument(DB_ID, CollectionIDs.NOTIFICATIONS, ID.unique(), {
+                    userId: followingId,
+                    type: 'follow',
+                    message: `${followerProfile?.name || 'Someone'} started following you`,
+                    link: `/profile/${followerId}`,
+                    isRead: false,
+                    createdAt: new Date().toISOString()
+                });
+            } catch (notifError) {
+                console.error("Failed to create follow notification", notifError);
+            }
+
             return true;
         }
     } catch (e) {
@@ -96,8 +141,6 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
 export const searchArticles = async (term: string) => {
     if (!term || term.length < 2) return [];
     try {
-        // Robust search implementation: Fetch latest articles and filter client-side.
-        // This mirrors the logic in Home.tsx and works without explicit FullText indexes being ready.
         const response = await databases.listDocuments(
             DB_ID,
             CollectionIDs.ARTICLES,
@@ -115,4 +158,34 @@ export const searchArticles = async (term: string) => {
         console.error("Search error:", e);
         return [];
     }
+};
+
+// Notifications
+export const getNotifications = async (userId: string) => {
+    try {
+        // Guard clause for invalid userId to prevent bad requests
+        if (!userId) return [];
+
+        const res = await databases.listDocuments(DB_ID, CollectionIDs.NOTIFICATIONS, [
+            Query.equal('userId', userId),
+            Query.orderDesc('$createdAt'),
+            Query.limit(20)
+        ]);
+        return res.documents;
+    } catch (e) {
+        // Completely silent fail for notifications to avoid UI interruption
+        return [];
+    }
+};
+
+export const markNotificationRead = async (notificationId: string) => {
+    try {
+        await databases.updateDocument(DB_ID, CollectionIDs.NOTIFICATIONS, notificationId, {
+            isRead: true
+        });
+    } catch (e) {}
+};
+
+export const markAllNotificationsRead = async (userId: string) => {
+    // Client-side optimistic update preferred
 };

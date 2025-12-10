@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { account, databases, uploadFile, ID, DB_ID, CollectionIDs } from '../lib/appwrite';
+import { account, databases, uploadFile, ID, DB_ID, CollectionIDs, base64ToFile } from '../lib/appwrite';
 import { generateAvatar } from '../lib/gemini';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -35,9 +35,7 @@ const Auth: React.FC = () => {
                 try {
                    const aiAvatarBase64 = await generateAvatar(name);
                    if (aiAvatarBase64) {
-                       const res = await fetch(aiAvatarBase64);
-                       const blob = await res.blob();
-                       const file = new File([blob], 'avatar.png', { type: 'image/png' });
+                       const file = base64ToFile(aiAvatarBase64, 'avatar.png');
                        avatarUrl = await uploadFile(file);
                    }
                 } catch (err) {

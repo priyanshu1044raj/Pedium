@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { databases, DB_ID, CollectionIDs, ID, uploadFile } from '../lib/appwrite';
+import { databases, DB_ID, CollectionIDs, ID, uploadFile, base64ToFile } from '../lib/appwrite';
 import { generateCoverImage, generateSummary } from '../lib/gemini';
 import { useAuth } from '../context/AuthContext';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
@@ -82,9 +82,7 @@ const Seed: React.FC = () => {
                 try {
                     const b64 = await generateCoverImage(article.title, article.tags);
                     if (b64) {
-                        const res = await fetch(b64);
-                        const blob = await res.blob();
-                        const file = new File([blob], 'seed_cover.png', { type: 'image/png' });
+                        const file = base64ToFile(b64, 'seed_cover.png');
                         coverUrl = await uploadFile(file);
                     }
                 } catch (e) {

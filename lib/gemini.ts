@@ -3,13 +3,16 @@ import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper: Generate Image from Prompt using gemini-2.5-flash-image
-export const generateImageFromPrompt = async (prompt: string): Promise<string | null> => {
+export const generateImageFromPrompt = async (prompt: string, aspectRatio: string = "1:1"): Promise<string | null> => {
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
                 parts: [{ text: prompt }]
             },
+            config: {
+                imageConfig: { aspectRatio: aspectRatio }
+            }
         });
 
         for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -29,7 +32,7 @@ export const generateImageFromPrompt = async (prompt: string): Promise<string | 
 export const generateAvatar = async (username: string): Promise<string | null> => {
     // Simplified prompt for reliable avatar generation
     const prompt = `cute colorful flat vector avatar icon for user ${username}, minimal style, white background, circular`;
-    return await generateImageFromPrompt(prompt);
+    return await generateImageFromPrompt(prompt, "1:1");
 };
 
 export const generateCoverImage = async (title: string, tags: string[] = [], context: string = ''): Promise<string | null> => {
@@ -37,9 +40,10 @@ export const generateCoverImage = async (title: string, tags: string[] = [], con
     const contextString = context ? `Context: ${context.substring(0, 200)}...` : '';
     
     // Prompt for high-quality blog cover
-    const prompt = `high quality editorial illustration for blog post titled "${title}". ${tagString} ${contextString} modern, minimal, flat design, artistic, 16:9 aspect ratio, no text`;
+    const prompt = `high quality editorial illustration for blog post titled "${title}". ${tagString} ${contextString} modern, minimal, flat design, artistic, no text`;
 
-    return await generateImageFromPrompt(prompt);
+    // Ensure 16:9 aspect ratio for covers
+    return await generateImageFromPrompt(prompt, "16:9");
 };
 
 export const generateSummary = async (title: string, content: string): Promise<string> => {

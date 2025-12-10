@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import EditorComponent from '../components/EditorComponent';
-import { uploadFile, databases, ID, DB_ID, CollectionIDs } from '../lib/appwrite';
+import { uploadFile, databases, ID, DB_ID, CollectionIDs, getFollowers, base64ToFile } from '../lib/appwrite';
 import { generateCoverImage, generateSummary, generateArticleContent, generateTags, generateImageFromPrompt } from '../lib/gemini';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -102,9 +102,7 @@ const Write: React.FC = () => {
 
             const aiBase64 = await generateCoverImage(title, tagList, context);
             if (aiBase64) {
-                const res = await fetch(aiBase64);
-                const blob = await res.blob();
-                const file = new File([blob], 'ai_generated_cover.png', { type: 'image/png' });
+                const file = base64ToFile(aiBase64, 'ai_generated_cover.png');
                 const url = await uploadFile(file);
                 setCoverImage(url);
             } else {
@@ -112,7 +110,7 @@ const Write: React.FC = () => {
             }
         } catch (e) {
             console.error("AI Generation failed", e);
-            alert("AI Generation failed. Please try again.");
+            alert("AI Generation failed. Check console for details.");
         } finally {
             setIsGeneratingCover(false);
         }
@@ -143,9 +141,7 @@ const Write: React.FC = () => {
                         try {
                             const b64 = await generateImageFromPrompt(block.data.prompt);
                             if (b64) {
-                                const res = await fetch(b64);
-                                const blob = await res.blob();
-                                const file = new File([blob], 'ai_content_image.png', { type: 'image/png' });
+                                const file = base64ToFile(b64, 'ai_content_image.png');
                                 const url = await uploadFile(file);
                                 
                                 processedBlocks.push({
@@ -225,9 +221,7 @@ const Write: React.FC = () => {
                 try {
                     const aiBase64 = await generateCoverImage(title, tagList, plainText);
                     if (aiBase64) {
-                        const res = await fetch(aiBase64);
-                        const blob = await res.blob();
-                        const file = new File([blob], 'ai_auto_cover.png', { type: 'image/png' });
+                        const file = base64ToFile(aiBase64, 'ai_auto_cover.png');
                         finalCoverImage = await uploadFile(file);
                     }
                 } catch (e) {}
@@ -253,12 +247,32 @@ const Write: React.FC = () => {
                 tags: tagList
             };
 
-            await databases.createDocument(
+            const newArticle = await databases.createDocument(
                 DB_ID,
                 CollectionIDs.ARTICLES,
                 ID.unique(),
                 articleData
             );
+
+            // SEND NOTIFICATIONS
+            try {
+                const followers = await getFollowers(user.$id);
+                // Create notifications for all followers
+                if (followers.length > 0) {
+                    await Promise.all(followers.map(f => 
+                         databases.createDocument(DB_ID, CollectionIDs.NOTIFICATIONS, ID.unique(), {
+                            userId: f.follower_id,
+                            type: 'new_article',
+                            message: `${profile.name} published: ${title}`,
+                            link: `/article/${newArticle.$id}`,
+                            isRead: false,
+                            createdAt: new Date().toISOString()
+                         })
+                    ));
+                }
+            } catch (notifErr) {
+                console.error("Failed to send notifications", notifErr);
+            }
 
             localStorage.removeItem(DRAFT_KEY);
             navigate('/');

@@ -88,3 +88,15 @@ Create the following collections inside `Pedium DB`.
 *   **Attributes:**
     *   `follower_id`: String (50)
     *   `following_id`: String (50)
+
+#### Collection: `notifications`
+*   **ID:** `notifications`
+*   **Permissions:** `Users` (Read, Create, Update, Delete).
+*   **Attributes:**
+    *   `userId`: String (50)
+    *   `type`: String (50) (e.g., 'new_article', 'follow')
+    *   `message`: String (255)
+    *   `link`: String (255)
+    *   `isRead`: Boolean (Default: false)
+*   **Indexes:**
+    *   Key: `user_notifs`, Type: `Key`, Attribute: `userId`, Order: `DESC`.

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { searchArticles } from '../lib/appwrite';
+import { searchArticles, getNotifications, markNotificationRead } from '../lib/appwrite';
 import { 
     PenTool, Bell, Search, Menu, X, User, LogOut, Sun, Moon
 } from 'lucide-react';
-import { Article } from '../types';
+import { Article, Notification } from '../types';
+import { formatDistanceToNow } from 'date-fns';
 
 const Navbar: React.FC = () => {
     const { user, profile, logout } = useAuth();
@@ -22,6 +23,12 @@ const Navbar: React.FC = () => {
     const [showResults, setShowResults] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
+    // Notification State
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 100);
@@ -35,11 +42,15 @@ const Navbar: React.FC = () => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowResults(false);
             }
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Search Logic
     useEffect(() => {
         const delaySearch = setTimeout(async () => {
             if (searchTerm.length >= 2) {
@@ -55,6 +66,30 @@ const Navbar: React.FC = () => {
         return () => clearTimeout(delaySearch);
     }, [searchTerm]);
 
+    // Fetch Notifications
+    const fetchNotifications = async () => {
+        if (!user) return;
+        try {
+            const res = await getNotifications(user.$id);
+            if (res) {
+                const data = res as unknown as Notification[];
+                setNotifications(data);
+                setHasUnread(data.some(n => !n.isRead));
+            }
+        } catch (e) {
+            // Ignore notification errors to keep UI clean
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            // Polling every 60s
+            const interval = setInterval(fetchNotifications, 60000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
+
     const handleLogout = async () => {
         await logout();
         navigate('/');
@@ -66,6 +101,16 @@ const Navbar: React.FC = () => {
             setIsMenuOpen(false);
             navigate(`/?q=${encodeURIComponent(searchTerm)}`);
         }
+    };
+
+    const handleNotificationClick = async (notification: Notification) => {
+        if (!notification.isRead) {
+            await markNotificationRead(notification.$id);
+            setNotifications(prev => prev.map(n => n.$id === notification.$id ? { ...n, isRead: true } : n));
+            // Re-check unread status
+            setHasUnread(notifications.some(n => n.$id !== notification.$id && !n.isRead));
+        }
+        setShowNotifications(false);
     };
 
     const isHomePage = location.pathname === '/';
@@ -149,9 +194,51 @@ const Navbar: React.FC = () => {
                                         <PenTool size={20} />
                                         <span>Write</span>
                                     </Link>
-                                    <button className="hover:text-black dark:hover:text-white transition-colors">
-                                        <Bell size={22} strokeWidth={1.5} />
-                                    </button>
+                                    
+                                    {/* Notifications */}
+                                    <div className="relative" ref={notifRef}>
+                                        <button 
+                                            onClick={() => setShowNotifications(!showNotifications)}
+                                            className="hover:text-black dark:hover:text-white transition-colors relative block"
+                                        >
+                                            <Bell size={22} strokeWidth={1.5} />
+                                            {hasUnread && (
+                                                <span className="absolute -top-0.5 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#121212]"></span>
+                                            )}
+                                        </button>
+                                        
+                                        {showNotifications && (
+                                            <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-[#1E1E1E] rounded-xl shadow-soft-hover border border-gray-100 dark:border-gray-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                                                    <span className="font-bold text-sm text-black dark:text-white">Notifications</span>
+                                                    <button onClick={fetchNotifications} className="text-xs text-green-600 hover:text-green-700">Refresh</button>
+                                                </div>
+                                                <div className="max-h-80 overflow-y-auto">
+                                                    {notifications.length > 0 ? (
+                                                        notifications.map(n => (
+                                                            <Link 
+                                                                to={n.link} 
+                                                                key={n.$id}
+                                                                onClick={() => handleNotificationClick(n)}
+                                                                className={`block px-4 py-3 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${!n.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                                                            >
+                                                                <p className={`text-sm ${!n.isRead ? 'font-semibold text-black dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+                                                                    {n.message}
+                                                                </p>
+                                                                <span className="text-xs text-gray-400 mt-1 block">
+                                                                    {formatDistanceToNow(new Date(n.$createdAt))} ago
+                                                                </span>
+                                                            </Link>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-4 text-center text-sm text-gray-500">
+                                                            No notifications yet.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                     
                                     <div className="relative group">
                                         <button className="block">
@@ -230,6 +317,14 @@ const Navbar: React.FC = () => {
                              <Link to="/write" className="flex items-center gap-3 text-brand-black dark:text-white" onClick={()=>setIsMenuOpen(false)}>
                                  <PenTool size={20}/> Write
                              </Link>
+                             <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Notifications</h4>
+                                {notifications.slice(0, 3).map(n => (
+                                    <Link key={n.$id} to={n.link} className="block text-sm text-gray-700 dark:text-gray-300 py-1" onClick={() => { handleNotificationClick(n); setIsMenuOpen(false); }}>
+                                        {n.message}
+                                    </Link>
+                                ))}
+                             </div>
                              <button onClick={handleLogout} className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
                                  <LogOut size={20}/> Sign Out
                              </button>
